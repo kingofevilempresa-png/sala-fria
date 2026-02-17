@@ -198,9 +198,13 @@ const App: React.FC = () => {
     const addNotification = (message: string, type: Notification['type'] = 'success') => {
         const id = Date.now().toString();
         setNotifications(prev => [...prev, { id, message, type }]);
+
+        // Faster dismiss in fast mode
+        const duration = appMode === 'fast' ? 1000 : 3000;
+
         setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== id));
-        }, 3000);
+        }, duration);
     };
 
     const logHistory = async (itemId: string, itemName: string, type: HistoryEntry['type'], amount: number, previousValue?: number) => {
