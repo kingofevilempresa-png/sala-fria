@@ -39,7 +39,7 @@ interface Notification {
 }
 
 const UNITS = [
-    'Quilos',
+    'Kilos',
     'Gramas',
     'Unidades',
     'Porção',
