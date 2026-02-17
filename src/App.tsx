@@ -491,17 +491,23 @@ const App: React.FC = () => {
                 ))}
             </div>
 
-            <header className="header animate-in" style={{ padding: '16px 24px', position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(20px)', background: 'rgba(15, 23, 42, 0.8)', borderBottom: '1px solid var(--card-border)' }}>
+            <header className="header animate-in" style={{ padding: '16px 24px', position: 'sticky', top: 0, zIndex: 100, background: 'transparent', borderBottom: 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button
                             className="secondary"
-                            style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)' }}
+                            style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--card-border)' }}
                             onClick={() => setIsMenuOpen(true)}
                         >
                             <Menu size={20} />
                         </button>
-                        <h1 style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px' }}>Sala Fria.</h1>
+                        <button
+                            className="secondary"
+                            style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--card-border)' }}
+                            onClick={() => setIsMenuOpen(true)}
+                        >
+                            <Search size={20} />
+                        </button>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
