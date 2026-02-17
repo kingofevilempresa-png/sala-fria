@@ -372,6 +372,23 @@ const App: React.FC = () => {
         setCategories(categories.filter(x => x.id !== id));
     };
 
+    const handleClearHistory = async () => {
+        if (confirm('Tem certeza que deseja apagar TODO o histórico? Esta ação é irreversível.')) {
+            // Using a loop to delete or a bulk delete if RLS permits. 
+            // Typically "DELETE FROM history" without where clause is blocked by safe mode or RLS often needs explicit policy.
+            // Assuming we want to delete all rows displayed.
+            const { error } = await supabase.from('history').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete not equal to nil UUID (basically all) if using RLS policy that allows it.
+
+            if (error) {
+                console.error('Error clearing history:', error);
+                addNotification('Erro ao limpar histórico.', 'error');
+                return;
+            }
+            setHistory([]);
+            addNotification('Histórico limpo com sucesso.', 'info');
+        }
+    };
+
     // --- Filter and Sort ---
     const sortedAndFilteredItems = items
         .filter(i =>
@@ -670,7 +687,14 @@ const App: React.FC = () => {
             {activeTab === 'history' && (
                 <main className="animate-in">
                     <div className="glass-card" style={{ padding: '24px' }}>
-                        <h2>Histórico</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2>Histórico</h2>
+                            {history.length > 0 && (
+                                <button className="danger" onClick={handleClearHistory} style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
+                                    <Trash2 size={16} style={{ marginRight: '6px' }} /> Limpar
+                                </button>
+                            )}
+                        </div>
                         <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {history.length === 0 && !loading ? (
                                 <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>Sem movimentações registradas.</p>
