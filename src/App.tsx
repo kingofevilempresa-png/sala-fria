@@ -490,6 +490,14 @@ const App: React.FC = () => {
                 ))}
             </div>
 
+            {/* Search Bar */}
+            {activeTab === 'inventory' && (
+                <div style={{ marginBottom: '20px', position: 'relative' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px', width: '100%', padding: '12px 12px 12px 40px' }} />
+                </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
                 {/* Nav & Toggle */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -573,13 +581,6 @@ const App: React.FC = () => {
                 </div>
             </div>
 
-            {/* Search Bar - Moved to own row */}
-            {activeTab === 'inventory' && (
-                <div style={{ marginBottom: '20px', position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                    <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px', width: '100%', padding: '12px 12px 12px 40px' }} />
-                </div>
-            )}
 
             {/* INVENTORY TAB */}
             {activeTab === 'inventory' && (
