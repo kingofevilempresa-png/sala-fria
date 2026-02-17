@@ -490,8 +490,9 @@ const App: React.FC = () => {
                 ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '16px', flexWrap: 'wrap' }}>
-                <nav style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+                {/* Nav & Toggle */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button className={activeTab === 'inventory' ? 'primary' : 'secondary'} style={{ padding: '10px' }} onClick={() => setActiveTab('inventory')} title="Inventário"><Package size={20} /></button>
                     {appMode === 'complete' && (
                         <>
@@ -500,8 +501,7 @@ const App: React.FC = () => {
                         </>
                     )}
 
-                    {/* Mode Toggle Switch */}
-                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)', marginLeft: '10px' }}>
+                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)' }}>
                         <button
                             onClick={() => setAppMode('fast')}
                             title="Modo Rápido"
@@ -533,45 +533,46 @@ const App: React.FC = () => {
                             <List size={18} />
                         </button>
                     </div>
-                </nav>
+                </div>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                    {/* Multiplier Selector (Fast Mode Only) */}
-                    {appMode === 'fast' && (
-                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--accent-primary)', boxShadow: '0 0 15px rgba(96, 165, 250, 0.2)' }}>
-                            {[1, 5, 10].map(amt => (
-                                <button
-                                    key={amt}
-                                    onClick={() => setFastAmount(amt)}
-                                    style={{
-                                        padding: '6px 14px',
-                                        borderRadius: '8px',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 800,
-                                        background: fastAmount === amt ? 'var(--accent-primary)' : 'transparent',
-                                        color: fastAmount === amt ? 'white' : 'var(--text-secondary)',
-                                        transition: 'all 0.2s',
-                                        minWidth: '40px'
-                                    }}
-                                >
-                                    x{amt}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                {/* Multiplier Selector (Fast Mode Only) */}
+                {appMode === 'fast' && (
+                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--accent-primary)', boxShadow: '0 0 15px rgba(96, 165, 250, 0.2)' }}>
+                        {[1, 5, 10].map(amt => (
+                            <button
+                                key={amt}
+                                onClick={() => setFastAmount(amt)}
+                                style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 800,
+                                    background: fastAmount === amt ? 'var(--accent-primary)' : 'transparent',
+                                    color: fastAmount === amt ? 'white' : 'var(--text-secondary)',
+                                    transition: 'all 0.2s',
+                                    minWidth: '40px'
+                                }}
+                            >
+                                x{amt}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
-                    {activeTab === 'inventory' && (
+                {/* Search Bar */}
+                {activeTab === 'inventory' && (
+                    <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+                        <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                        <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px', width: '100%' }} />
+                    </div>
+                )}
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {activeTab === 'inventory' && appMode === 'complete' && (
                         <>
-                            <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
-                                <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px', width: '100%' }} />
-                            </div>
-                            {appMode === 'complete' && (
-                                <>
-                                    <button className="secondary" style={{ padding: '10px' }} onClick={() => setIsCategoryModalOpen(true)} title="Categorias"><Layers size={20} /></button>
-                                    <button className="primary" style={{ padding: '10px' }} onClick={() => { setEditingItem(null); setNewItem({ name: '', category: '', unit: '', value: '' }); setIsItemModalOpen(true); }} title="Novo Item"><Plus size={20} /></button>
-                                </>
-                            )}
+                            <button className="secondary" style={{ padding: '10px' }} onClick={() => setIsCategoryModalOpen(true)} title="Categorias"><Layers size={20} /></button>
+                            <button className="primary" style={{ padding: '10px' }} onClick={() => { setEditingItem(null); setNewItem({ name: '', category: '', unit: '', value: '' }); setIsItemModalOpen(true); }} title="Novo Item"><Plus size={20} /></button>
                         </>
                     )}
                     {activeTab === 'gramature' && appMode === 'complete' && (
