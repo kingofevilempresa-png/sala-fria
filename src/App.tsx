@@ -589,7 +589,7 @@ const App: React.FC = () => {
                 )}
 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
                     {activeTab === 'inventory' && appMode === 'complete' && (
                         <>
                             <button className="secondary" style={{ padding: '10px' }} onClick={() => setIsCategoryModalOpen(true)} title="Categorias"><Layers size={20} /></button>
@@ -599,6 +599,7 @@ const App: React.FC = () => {
                     {activeTab === 'gramature' && appMode === 'complete' && (
                         <button className="primary" style={{ padding: '10px' }} onClick={() => setIsGramatureModalOpen(true)} title="Nova Gramatura"><Plus size={20} /></button>
                     )}
+                    <button className="danger" style={{ padding: '10px' }} onClick={handleLogout} title="Sair"><LogOut size={20} /></button>
                 </div>
             </div>
 
