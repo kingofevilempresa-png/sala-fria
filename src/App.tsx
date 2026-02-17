@@ -493,15 +493,7 @@ const App: React.FC = () => {
             <header className="header animate-in">
                 <div className="title-section">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '100px', border: '1px solid var(--card-border)' }}>
-                            <User size={14} style={{ color: 'var(--accent-primary)' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {session.user.email?.split('@')[0]}
-                            </span>
-                            <button onClick={handleLogout} style={{ background: 'transparent', padding: '4px', display: 'flex', color: 'var(--danger)', opacity: 0.7 }} title="Sair">
-                                <LogOut size={14} />
-                            </button>
-                        </div>
+                        {/* Header text removed */}
                     </div>
                     <nav style={{ display: 'flex', gap: '20px', marginTop: '12px' }}>
                         <button className={activeTab === 'inventory' ? 'primary' : 'secondary'} style={{ padding: '8px' }} onClick={() => setActiveTab('inventory')} title="Inventário"><Package size={18} /></button>
