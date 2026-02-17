@@ -767,7 +767,7 @@ const App: React.FC = () => {
                             <h2 style={{ fontSize: '1.25rem' }}>Categorias</h2>
                             <button onClick={() => setIsCategoryModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }}><X size={20} /></button>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}><input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} style={{ flex: 1, padding: '8px' }} /><button className="primary" onClick={handleAddCategory}><Plus size={18} /></button></div>
+                        <div style={{ display: 'flex', gap: '8px' }}><input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} style={{ width: '100%', maxWidth: '300px', padding: '8px' }} /><button className="primary" onClick={handleAddCategory}><Plus size={18} /></button></div>
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>{categories.map(c => (<div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}><span>{c.name}</span><button className="danger" style={{ padding: '4px' }} onClick={() => handleDeleteCategory(c.id)}><Trash2 size={14} /></button></div>))}</div>
                     </div>
                 </div>
