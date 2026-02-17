@@ -710,7 +710,10 @@ const App: React.FC = () => {
             {isItemModalOpen && (
                 <div className="modal-overlay">
                     <div className="glass-card modal-content">
-                        <h2>{editingItem ? 'Editar Item' : 'Novo Item'}</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '1.25rem' }}>{editingItem ? 'Editar Item' : 'Novo Item'}</h2>
+                            <button onClick={() => setIsItemModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                        </div>
                         <div className="form-group"><label>Nome</label><input type="text" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} /></div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div className="form-group"><label>Categoria</label><select value={newItem.category} onChange={e => setNewItem({ ...newItem, category: e.target.value })}><option value="">Selecione...</option>{categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
@@ -718,7 +721,6 @@ const App: React.FC = () => {
                         </div>
                         <div className="form-group"><label>Valor Inicial</label><input type="number" value={newItem.value} onChange={e => setNewItem({ ...newItem, value: e.target.value })} /></div>
                         <button className="primary" style={{ width: '100%', marginTop: '12px' }} onClick={handleAddItem}><Save size={18} /> {editingItem ? 'Salvar Alterações' : 'Criar Item'}</button>
-                        <button className="secondary" style={{ width: '100%' }} onClick={() => setIsItemModalOpen(false)}>Cancelar</button>
                     </div>
                 </div>
             )}
@@ -726,9 +728,12 @@ const App: React.FC = () => {
             {isAdjustModalOpen && adjustingItem && (
                 <div className="modal-overlay">
                     <div className="glass-card modal-content animate-in">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div><h2 style={{ fontSize: '1.2rem' }}>{adjustType === 'add' ? 'Adicionar ao' : 'Remover do'} Estoque</h2><p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{adjustingItem.name} ({adjustingItem.unit})</p></div>
-                            <button onClick={() => setIsAdjustModalOpen(false)} style={{ background: 'transparent' }}><X size={24} /></button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.2rem' }}>{adjustType === 'add' ? 'Adicionar ao' : 'Remover do'} Estoque</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{adjustingItem.name} ({adjustingItem.unit})</p>
+                            </div>
+                            <button onClick={() => setIsAdjustModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }}><X size={20} /></button>
                         </div>
                         <div className="form-group"><label>Quantidade</label><input type="number" autoFocus placeholder="0.00" value={adjustValue} onChange={e => setAdjustValue(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleConfirmAdjust()} /></div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
@@ -736,7 +741,7 @@ const App: React.FC = () => {
                             <ChevronRight size={16} style={{ opacity: 0.3 }} />
                             <div style={{ textAlign: 'center', flex: 1 }}><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Novo</div><div style={{ fontWeight: 700, color: adjustType === 'add' ? 'var(--success)' : 'var(--danger)' }}>{adjustValue ? (adjustType === 'add' ? adjustingItem.value + parseFloat(adjustValue) : Math.max(0, adjustingItem.value - parseFloat(adjustValue))) : '-'}</div></div>
                         </div>
-                        <button className="primary" style={{ width: '100%' }} onClick={() => handleConfirmAdjust()}>Confirmar Ajuste</button>
+                        <button className="primary" style={{ width: '100%', marginTop: '16px' }} onClick={() => handleConfirmAdjust()}>Confirmar Ajuste</button>
                     </div>
                 </div>
             )}
@@ -744,22 +749,26 @@ const App: React.FC = () => {
             {isGramatureModalOpen && (
                 <div className="modal-overlay">
                     <div className="glass-card modal-content">
-                        <h2>Nova Gramatura</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '1.25rem' }}>Nova Gramatura</h2>
+                            <button onClick={() => setIsGramatureModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                        </div>
                         <div className="form-group"><label>Item</label><input type="text" placeholder="Ex: Filé" value={newGramature.name} onChange={e => setNewGramature({ ...newGramature, name: e.target.value })} /></div>
                         <div className="form-group"><label>Peso</label><input type="text" placeholder="Ex: 220g" value={newGramature.weight} onChange={e => setNewGramature({ ...newGramature, weight: e.target.value })} /></div>
                         <button className="primary" style={{ width: '100%', marginTop: '12px' }} onClick={handleAddGramature}><Save size={18} /> Salvar Gramatura</button>
-                        <button className="secondary" style={{ width: '100%' }} onClick={() => setIsGramatureModalOpen(false)}>Cancelar</button>
                     </div>
                 </div>
             )}
 
             {isCategoryModalOpen && (
                 <div className="modal-overlay">
-                    <div className="glass-card modal-content">
-                        <h2>Categorias</h2>
+                    <div className="glass-card modal-content" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '1.25rem' }}>Categorias</h2>
+                            <button onClick={() => setIsCategoryModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                        </div>
                         <div style={{ display: 'flex', gap: '8px' }}><input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} style={{ flex: 1 }} /><button className="primary" onClick={handleAddCategory}><Plus size={18} /></button></div>
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>{categories.map(c => (<div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}><span>{c.name}</span><button className="danger" style={{ padding: '4px' }} onClick={() => handleDeleteCategory(c.id)}><Trash2 size={14} /></button></div>))}</div>
-                        <button className="secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setIsCategoryModalOpen(false)}>Fechar</button>
                     </div>
                 </div>
             )}
