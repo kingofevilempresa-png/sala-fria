@@ -121,24 +121,10 @@ select:focus {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 100px 20px 40px 20px;
-  /* Increased top padding for fixed header */
+  padding: 40px 20px;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: var(--bg-dark);
-  /* Solid background by request */
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--card-border);
+/* Header style removed */
 }
 
 /* Removed .title-section h1 styles as element is removed */

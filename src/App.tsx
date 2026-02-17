@@ -490,59 +490,52 @@ const App: React.FC = () => {
                 ))}
             </div>
 
-            <header className="header animate-in">
-                <div className="title-section">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        {/* Header text removed */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '16px', flexWrap: 'wrap' }}>
+                <nav style={{ display: 'flex', gap: '8px' }}>
+                    <button className={activeTab === 'inventory' ? 'primary' : 'secondary'} style={{ padding: '10px' }} onClick={() => setActiveTab('inventory')} title="Inventário"><Package size={20} /></button>
+                    {appMode === 'complete' && (
+                        <>
+                            <button className={activeTab === 'gramature' ? 'primary' : 'secondary'} style={{ padding: '10px' }} onClick={() => setActiveTab('gramature')} title="Gramatura"><Scaling size={20} /></button>
+                            <button className={activeTab === 'history' ? 'primary' : 'secondary'} style={{ padding: '10px' }} onClick={() => setActiveTab('history')} title="Histórico"><History size={20} /></button>
+                        </>
+                    )}
+
+                    {/* Mode Toggle Switch */}
+                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)', marginLeft: '10px' }}>
+                        <button
+                            onClick={() => setAppMode('fast')}
+                            title="Modo Rápido"
+                            style={{
+                                padding: '8px',
+                                borderRadius: '8px',
+                                background: appMode === 'fast' ? 'var(--accent-primary)' : 'transparent',
+                                color: appMode === 'fast' ? 'white' : 'var(--text-secondary)',
+                                transition: 'all 0.2s',
+                                border: 'none',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Zap size={18} />
+                        </button>
+                        <button
+                            onClick={() => setAppMode('complete')}
+                            title="Modo Completo"
+                            style={{
+                                padding: '8px',
+                                borderRadius: '8px',
+                                background: appMode === 'complete' ? 'var(--accent-primary)' : 'transparent',
+                                color: appMode === 'complete' ? 'white' : 'var(--text-secondary)',
+                                transition: 'all 0.2s',
+                                border: 'none',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <List size={18} />
+                        </button>
                     </div>
-                    <nav style={{ display: 'flex', gap: '20px', marginTop: '12px' }}>
-                        <button className={activeTab === 'inventory' ? 'primary' : 'secondary'} style={{ padding: '8px' }} onClick={() => setActiveTab('inventory')} title="Inventário"><Package size={18} /></button>
-                        {appMode === 'complete' && (
-                            <>
-                                <button className={activeTab === 'gramature' ? 'primary' : 'secondary'} style={{ padding: '8px' }} onClick={() => setActiveTab('gramature')} title="Gramatura"><Scaling size={18} /></button>
-                                <button className={activeTab === 'history' ? 'primary' : 'secondary'} style={{ padding: '8px' }} onClick={() => setActiveTab('history')} title="Histórico"><History size={18} /></button>
-                            </>
-                        )}
+                </nav>
 
-                        {/* Mode Toggle Switch - Moved to Nav */}
-                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)', marginLeft: '10px' }}>
-                            <button
-                                onClick={() => setAppMode('fast')}
-                                title="Modo Rápido"
-                                style={{
-                                    padding: '8px',
-                                    borderRadius: '8px',
-                                    background: appMode === 'fast' ? 'var(--accent-primary)' : 'transparent',
-                                    color: appMode === 'fast' ? 'white' : 'var(--text-secondary)',
-                                    transition: 'all 0.2s',
-                                    border: 'none',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <Zap size={18} />
-                            </button>
-                            <button
-                                onClick={() => setAppMode('complete')}
-                                title="Modo Completo"
-                                style={{
-                                    padding: '8px',
-                                    borderRadius: '8px',
-                                    background: appMode === 'complete' ? 'var(--accent-primary)' : 'transparent',
-                                    color: appMode === 'complete' ? 'white' : 'var(--text-secondary)',
-                                    transition: 'all 0.2s',
-                                    border: 'none',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <List size={18} />
-                            </button>
-                        </div>
-                    </nav>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {/* Mode Toggle search placeholder removed here - was duplicate or part of previous logic */}
-
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                     {/* Multiplier Selector (Fast Mode Only) */}
                     {appMode === 'fast' && (
                         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--accent-primary)', boxShadow: '0 0 15px rgba(96, 165, 250, 0.2)' }}>
@@ -551,14 +544,14 @@ const App: React.FC = () => {
                                     key={amt}
                                     onClick={() => setFastAmount(amt)}
                                     style={{
-                                        padding: '6px 16px',
+                                        padding: '6px 14px',
                                         borderRadius: '8px',
                                         fontSize: '0.8rem',
                                         fontWeight: 800,
                                         background: fastAmount === amt ? 'var(--accent-primary)' : 'transparent',
                                         color: fastAmount === amt ? 'white' : 'var(--text-secondary)',
                                         transition: 'all 0.2s',
-                                        minWidth: '50px'
+                                        minWidth: '40px'
                                     }}
                                 >
                                     x{amt}
@@ -569,9 +562,9 @@ const App: React.FC = () => {
 
                     {activeTab === 'inventory' && (
                         <>
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
                                 <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px' }} />
+                                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px', width: '100%' }} />
                             </div>
                             {appMode === 'complete' && (
                                 <>
@@ -585,7 +578,7 @@ const App: React.FC = () => {
                         <button className="primary" style={{ padding: '10px' }} onClick={() => setIsGramatureModalOpen(true)} title="Nova Gramatura"><Plus size={20} /></button>
                     )}
                 </div>
-            </header>
+            </div>
 
             {/* INVENTORY TAB */}
             {activeTab === 'inventory' && (
