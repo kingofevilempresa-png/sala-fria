@@ -199,8 +199,8 @@ const App: React.FC = () => {
         const id = Date.now().toString();
         setNotifications(prev => [...prev, { id, message, type }]);
 
-        // Faster dismiss in fast mode
-        const duration = appMode === 'fast' ? 1000 : 3000;
+        // Longer dismiss in fast mode as requested
+        const duration = appMode === 'fast' ? 4000 : 3000;
 
         setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== id));
