@@ -135,10 +135,8 @@ select:focus {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(10, 12, 16, 0.85);
-  /* Dark background with opacity */
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: var(--bg-dark);
+  /* Solid background by request */
   padding: 16px 20px;
   border-bottom: 1px solid var(--card-border);
 }

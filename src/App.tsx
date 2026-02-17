@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail } from 'lucide-react';
+import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Zap, List } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
@@ -516,11 +516,10 @@ const App: React.FC = () => {
                         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)', marginLeft: '10px' }}>
                             <button
                                 onClick={() => setAppMode('fast')}
+                                title="Modo Rápido"
                                 style={{
-                                    padding: '6px 12px',
+                                    padding: '8px',
                                     borderRadius: '8px',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 600,
                                     background: appMode === 'fast' ? 'var(--accent-primary)' : 'transparent',
                                     color: appMode === 'fast' ? 'white' : 'var(--text-secondary)',
                                     transition: 'all 0.2s',
@@ -528,15 +527,14 @@ const App: React.FC = () => {
                                     cursor: 'pointer'
                                 }}
                             >
-                                Rápido
+                                <Zap size={18} />
                             </button>
                             <button
                                 onClick={() => setAppMode('complete')}
+                                title="Modo Completo"
                                 style={{
-                                    padding: '6px 12px',
+                                    padding: '8px',
                                     borderRadius: '8px',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 600,
                                     background: appMode === 'complete' ? 'var(--accent-primary)' : 'transparent',
                                     color: appMode === 'complete' ? 'white' : 'var(--text-secondary)',
                                     transition: 'all 0.2s',
@@ -544,7 +542,7 @@ const App: React.FC = () => {
                                     cursor: 'pointer'
                                 }}
                             >
-                                Completo
+                                <List size={18} />
                             </button>
                         </div>
                     </nav>
@@ -579,6 +577,10 @@ const App: React.FC = () => {
 
                     {activeTab === 'inventory' && (
                         <>
+                            <div style={{ position: 'relative' }}>
+                                <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px' }} />
+                            </div>
                             {appMode === 'complete' && (
                                 <>
                                     <button className="secondary" style={{ padding: '10px' }} onClick={() => setIsCategoryModalOpen(true)} title="Categorias"><Layers size={20} /></button>
