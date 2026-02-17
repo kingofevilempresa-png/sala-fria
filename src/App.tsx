@@ -589,22 +589,22 @@ const App: React.FC = () => {
                     ) : (
                         sortedAndFilteredItems.map(item => (
                             <div key={item.id} className="glass-card item-card animate-in">
-                                <div className="item-header">
-                                    <div>
+                                <div className="item-header" style={{ display: 'block' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                         <div style={{ display: 'flex', gap: '6px' }}>
                                             <span className="item-category">{item.category}</span>
                                             <span className="item-category" style={{ background: 'rgba(139,92,246,0.1)', color: 'var(--accent-secondary)' }}>{item.unit}</span>
                                         </div>
-                                        <p className="item-name" style={{ marginTop: '10px' }}>{item.name}</p>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div className="item-value">{item.value.toLocaleString('pt-BR')}</div>
                                         {appMode === 'complete' && (
-                                            <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '4px' }}>
                                                 <button className="secondary" style={{ padding: '6px' }} onClick={() => handleEditItem(item)}><Edit2 size={12} /></button>
                                                 <button className="danger" style={{ padding: '6px' }} onClick={() => handleDeleteItem(item.id, item.name)}><Trash2 size={12} /></button>
                                             </div>
                                         )}
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <p className="item-name" style={{ margin: 0 }}>{item.name}</p>
+                                        <div className="item-value" style={{ fontSize: '1.5rem' }}>{item.value.toLocaleString('pt-BR')}</div>
                                     </div>
                                 </div>
                                 <div className="item-actions" style={{ borderTop: '1px solid var(--card-border)', paddingTop: '16px', marginTop: '12px' }}>
