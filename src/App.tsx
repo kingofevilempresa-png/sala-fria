@@ -493,7 +493,6 @@ const App: React.FC = () => {
             <header className="header animate-in">
                 <div className="title-section">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <h1>Sala Fria.</h1>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '100px', border: '1px solid var(--card-border)' }}>
                             <User size={14} style={{ color: 'var(--accent-primary)' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -512,41 +511,47 @@ const App: React.FC = () => {
                                 <button className={activeTab === 'history' ? 'primary' : 'secondary'} style={{ padding: '8px' }} onClick={() => setActiveTab('history')} title="Histórico"><History size={18} /></button>
                             </>
                         )}
+
+                        {/* Mode Toggle Switch - Moved to Nav */}
+                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)', marginLeft: '10px' }}>
+                            <button
+                                onClick={() => setAppMode('fast')}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    background: appMode === 'fast' ? 'var(--accent-primary)' : 'transparent',
+                                    color: appMode === 'fast' ? 'white' : 'var(--text-secondary)',
+                                    transition: 'all 0.2s',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Rápido
+                            </button>
+                            <button
+                                onClick={() => setAppMode('complete')}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    background: appMode === 'complete' ? 'var(--accent-primary)' : 'transparent',
+                                    color: appMode === 'complete' ? 'white' : 'var(--text-secondary)',
+                                    transition: 'all 0.2s',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Completo
+                            </button>
+                        </div>
                     </nav>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {/* Mode Toggle Switch */}
-                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)' }}>
-                        <button
-                            onClick={() => setAppMode('fast')}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                background: appMode === 'fast' ? 'var(--accent-primary)' : 'transparent',
-                                color: appMode === 'fast' ? 'white' : 'var(--text-secondary)',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Rápido
-                        </button>
-                        <button
-                            onClick={() => setAppMode('complete')}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                background: appMode === 'complete' ? 'var(--accent-primary)' : 'transparent',
-                                color: appMode === 'complete' ? 'white' : 'var(--text-secondary)',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Completo
-                        </button>
-                    </div>
+                    {/* Mode Toggle search placeholder removed here - was duplicate or part of previous logic */}
 
                     {/* Multiplier Selector (Fast Mode Only) */}
                     {appMode === 'fast' && (
@@ -574,10 +579,6 @@ const App: React.FC = () => {
 
                     {activeTab === 'inventory' && (
                         <>
-                            <div style={{ position: 'relative' }}>
-                                <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px' }} />
-                            </div>
                             {appMode === 'complete' && (
                                 <>
                                     <button className="secondary" style={{ padding: '10px' }} onClick={() => setIsCategoryModalOpen(true)} title="Categorias"><Layers size={20} /></button>
@@ -585,12 +586,6 @@ const App: React.FC = () => {
                                 </>
                             )}
                         </>
-                    )}
-                    {activeTab === 'inventory' && appMode === 'fast' && (
-                        <div style={{ position: 'relative' }}>
-                            <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                            <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px' }} />
-                        </div>
                     )}
                     {activeTab === 'gramature' && appMode === 'complete' && (
                         <button className="primary" style={{ padding: '10px' }} onClick={() => setIsGramatureModalOpen(true)} title="Nova Gramatura"><Plus size={20} /></button>
