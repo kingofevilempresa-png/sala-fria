@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail } from 'lucide-react';
+import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Menu } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
@@ -48,6 +48,20 @@ const UNITS = [
 ];
 
 const App: React.FC = () => {
+    // --- Debug Check ---
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        return (
+            <div style={{ color: 'white', background: '#0f172a', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+                <h1 style={{ color: '#ef4444' }}>Erro de Configuração</h1>
+                <p>As chaves de acesso ao banco de dados não foram encontradas.</p>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px', marginTop: '20px', fontSize: '0.8rem' }}>
+                    <p>URL: {import.meta.env.VITE_SUPABASE_URL ? '✅ OK' : '❌ Faltando'}</p>
+                    <p>KEY: {import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅ OK' : '❌ Faltando'}</p>
+                </div>
+            </div>
+        );
+    }
+
     // --- Auth State ---
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
@@ -94,6 +108,7 @@ const App: React.FC = () => {
     const [newItem, setNewItem] = useState({ name: '', category: '', unit: '', value: '' });
     const [newGramature, setNewGramature] = useState({ name: '', weight: '' });
     const [newCategory, setNewCategory] = useState('');
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // --- Auth Effects ---
     useEffect(() => {
@@ -476,106 +491,164 @@ const App: React.FC = () => {
                 ))}
             </div>
 
-            <header className="header animate-in">
-                <div className="title-section">
+            <header className="header animate-in" style={{ padding: '16px 24px', position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(20px)', background: 'rgba(15, 23, 42, 0.8)', borderBottom: '1px solid var(--card-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <button
+                            className="secondary"
+                            style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)' }}
+                            onClick={() => setIsMenuOpen(true)}
+                        >
+                            <Menu size={20} />
+                        </button>
+                        <h1 style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px' }}>Sala Fria.</h1>
+                    </div>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <h1>Sala Fria.</h1>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '100px', border: '1px solid var(--card-border)' }}>
-                            <User size={14} style={{ color: 'var(--accent-primary)' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {session.user.email?.split('@')[0]}
-                            </span>
-                            <button onClick={handleLogout} style={{ background: 'transparent', padding: '4px', display: 'flex', color: 'var(--danger)', opacity: 0.7 }} title="Sair">
-                                <LogOut size={14} />
+                        {/* THE INTERRUPTOR (Mode Toggle) - Stays Outside */}
+                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)' }}>
+                            <button
+                                onClick={() => setAppMode('fast')}
+                                style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    background: appMode === 'fast' ? 'var(--accent-primary)' : 'transparent',
+                                    color: appMode === 'fast' ? 'white' : 'var(--text-secondary)',
+                                    transition: 'all 0.2s',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}
+                            >
+                                Rápido
+                            </button>
+                            <button
+                                onClick={() => setAppMode('complete')}
+                                style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    background: appMode === 'complete' ? 'var(--accent-primary)' : 'transparent',
+                                    color: appMode === 'complete' ? 'white' : 'var(--text-secondary)',
+                                    transition: 'all 0.2s',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}
+                            >
+                                Completo
                             </button>
                         </div>
-                    </div>
-                    <nav style={{ display: 'flex', gap: '20px', marginTop: '12px' }}>
-                        <button className={activeTab === 'inventory' ? 'primary' : 'secondary'} style={{ padding: '6px 12px' }} onClick={() => setActiveTab('inventory')}><Package size={16} /> Inventário</button>
-                        {appMode === 'complete' && (
-                            <>
-                                <button className={activeTab === 'gramature' ? 'primary' : 'secondary'} style={{ padding: '6px 12px' }} onClick={() => setActiveTab('gramature')}><Scaling size={16} /> Gramatura</button>
-                                <button className={activeTab === 'history' ? 'primary' : 'secondary'} style={{ padding: '6px 12px' }} onClick={() => setActiveTab('history')}><History size={16} /> Histórico</button>
-                            </>
-                        )}
-                    </nav>
-                </div>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {/* Mode Toggle Switch */}
-                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--card-border)' }}>
-                        <button
-                            onClick={() => setAppMode('fast')}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                background: appMode === 'fast' ? 'var(--accent-primary)' : 'transparent',
-                                color: appMode === 'fast' ? 'white' : 'var(--text-secondary)',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Rápido
-                        </button>
-                        <button
-                            onClick={() => setAppMode('complete')}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                background: appMode === 'complete' ? 'var(--accent-primary)' : 'transparent',
-                                color: appMode === 'complete' ? 'white' : 'var(--text-secondary)',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Completo
-                        </button>
-                    </div>
-
-                    {/* Multiplier Selector (Fast Mode Only) */}
-                    {appMode === 'fast' && (
-                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px', border: '1px solid var(--accent-primary)', boxShadow: '0 0 15px rgba(96, 165, 250, 0.2)' }}>
-                            {[1, 5, 10].map(amt => (
-                                <button
-                                    key={amt}
-                                    onClick={() => setFastAmount(amt)}
-                                    style={{
-                                        padding: '6px 16px',
-                                        borderRadius: '8px',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 800,
-                                        background: fastAmount === amt ? 'var(--accent-primary)' : 'transparent',
-                                        color: fastAmount === amt ? 'white' : 'var(--text-secondary)',
-                                        transition: 'all 0.2s',
-                                        minWidth: '50px'
-                                    }}
-                                >
-                                    x{amt}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {activeTab === 'inventory' && (
-                        <>
-                            <div style={{ position: 'relative' }}>
-                                <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: '40px' }} />
+                        {appMode === 'fast' && (
+                            <div style={{ display: 'flex', background: 'rgba(96, 165, 250, 0.1)', borderRadius: '12px', padding: '4px', border: '1px solid var(--accent-primary)' }}>
+                                {[1, 5, 10].map(amt => (
+                                    <button
+                                        key={amt}
+                                        onClick={() => setFastAmount(amt)}
+                                        style={{
+                                            padding: '6px 12px',
+                                            borderRadius: '8px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 800,
+                                            background: fastAmount === amt ? 'var(--accent-primary)' : 'transparent',
+                                            color: fastAmount === amt ? 'white' : 'var(--text-secondary)',
+                                            minWidth: '40px'
+                                        }}
+                                    >
+                                        x{amt}
+                                    </button>
+                                ))}
                             </div>
-                            {appMode === 'complete' && (
-                                <>
-                                    <button className="secondary" onClick={() => setIsCategoryModalOpen(true)}><Layers size={18} /> Categorias</button>
-                                    <button className="primary" onClick={() => { setEditingItem(null); setNewItem({ name: '', category: '', unit: '', value: '' }); setIsItemModalOpen(true); }}><Plus size={18} /> Novo Item</button>
-                                </>
-                            )}
-                        </>
-                    )}
-                    {activeTab === 'gramature' && appMode === 'complete' && (
-                        <button className="primary" onClick={() => setIsGramatureModalOpen(true)}><Plus size={18} /> Nova Gramatura</button>
-                    )}
+                        )}
+                    </div>
                 </div>
+
+                {/* SIDE MENU (HAMBURGER MENU) */}
+                {isMenuOpen && (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} onClick={() => setIsMenuOpen(false)}>
+                        <div
+                            className="glass-card animate-in-right"
+                            style={{
+                                position: 'absolute',
+                                right: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: '320px',
+                                padding: '32px',
+                                background: 'var(--card-bg)',
+                                borderLeft: '1px solid var(--card-border)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '24px'
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Menu</h2>
+                                <button className="secondary" style={{ padding: '8px' }} onClick={() => setIsMenuOpen(false)}><X size={20} /></button>
+                            </div>
+
+                            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <User size={20} color="white" />
+                                    </div>
+                                    <div style={{ overflow: 'hidden' }}>
+                                        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>{session.user.email?.split('@')[0]}</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Usuário Ativo</p>
+                                    </div>
+                                </div>
+                                <button
+                                    className="secondary"
+                                    onClick={handleLogout}
+                                    style={{ width: '100%', justifyContent: 'center', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                                >
+                                    <LogOut size={16} /> Sair da Conta
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '1px', marginLeft: '4px' }}>Navegação</p>
+                                <button className={activeTab === 'inventory' ? 'primary' : 'secondary'} style={{ textAlign: 'left', padding: '12px 16px' }} onClick={() => { setActiveTab('inventory'); setIsMenuOpen(false); }}>
+                                    <Package size={18} /> Inventário
+                                </button>
+                                {appMode === 'complete' && (
+                                    <>
+                                        <button className={activeTab === 'gramature' ? 'primary' : 'secondary'} style={{ textAlign: 'left', padding: '12px 16px' }} onClick={() => { setActiveTab('gramature'); setIsMenuOpen(false); }}>
+                                            <Scaling size={18} /> Gramaturas
+                                        </button>
+                                        <button className={activeTab === 'history' ? 'primary' : 'secondary'} style={{ textAlign: 'left', padding: '12px 16px' }} onClick={() => { setActiveTab('history'); setIsMenuOpen(false); }}>
+                                            <History size={18} /> Histórico de Ações
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto' }}>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '1px', marginLeft: '4px' }}>Ações Rápidas</p>
+                                <div style={{ position: 'relative' }}>
+                                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                    <input type="text" placeholder="Buscar no estoque..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ width: '100%', paddingLeft: '40px' }} />
+                                </div>
+                                {appMode === 'complete' && (
+                                    <>
+                                        {activeTab === 'inventory' && (
+                                            <>
+                                                <button className="secondary" style={{ width: '100%' }} onClick={() => { setIsCategoryModalOpen(true); setIsMenuOpen(false); }}><Layers size={18} /> Gerenciar Categorias</button>
+                                                <button className="primary" style={{ width: '100%' }} onClick={() => { setEditingItem(null); setNewItem({ name: '', category: '', unit: '', value: '' }); setIsItemModalOpen(true); setIsMenuOpen(false); }}><Plus size={18} /> Adicionar Novo Item</button>
+                                            </>
+                                        )}
+                                        {activeTab === 'gramature' && (
+                                            <button className="primary" style={{ width: '100%' }} onClick={() => { setIsGramatureModalOpen(true); setIsMenuOpen(false); }}><Plus size={18} /> Nova Gramatura</button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* INVENTORY TAB */}
