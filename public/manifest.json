@@ -1,0 +1,21 @@
+{
+    "name": "Sala Fria - Inventário",
+    "short_name": "Sala Fria",
+    "description": "Sistema de Controle de Estoque Sala Fria",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#0f172a",
+    "icons": [
+        {
+            "src": "https://img.icons8.com/bubbles/100/000000/refrigerator.png",
+            "sizes": "100x100",
+            "type": "image/png"
+        },
+        {
+            "src": "https://img.icons8.com/bubbles/512/000000/refrigerator.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

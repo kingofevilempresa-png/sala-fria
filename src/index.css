@@ -133,7 +133,6 @@ select:focus {
 }
 
 /* Header style removed */
-}
 
 /* Removed .title-section h1 styles as element is removed */
 
@@ -165,15 +164,15 @@ select:focus {
 
 .items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .item-card {
-  padding: 24px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   position: relative;
   overflow: hidden;
 }
@@ -211,7 +210,7 @@ select:focus {
 }
 
 .item-value {
-  font-size: 1.5rem;
+  font-size: 1.65rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -335,7 +334,7 @@ select:focus {
   }
 
   .item-card {
-    padding: 16px;
+    padding: 8px;
   }
 
   .item-value {
@@ -371,4 +370,38 @@ select:focus {
     font-size: 16px !important;
     min-height: 48px;
   }
+}
+
+.horizontal-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px 4px 16px 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.shelf-card {
+  flex: 0 0 85px;
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.shelf-card.active {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+}
+
+.shelf-card:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
