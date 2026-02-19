@@ -1273,8 +1273,8 @@ const App: React.FC = () => {
             {activeTab === 'inventory' && (
                 <main className="animate-in">
                     {/* Visual Map / Shelves Section */}
-                    <div style={{ marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <div style={{ marginBottom: '0px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0px' }}>
                             <Layers size={18} style={{ color: 'var(--accent-primary)' }} />
                             <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Mapa da Sala Fria</h3>
                         </div>

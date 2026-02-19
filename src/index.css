@@ -376,7 +376,7 @@ select:focus {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 4px 4px 10px 4px;
+  padding: 4px 4px 4px 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
