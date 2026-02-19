@@ -1,21 +1,63 @@
 {
-    "name": "Sala Fria - Inventário",
+    "name": "Sala Fria - Gestão de Estoque",
     "short_name": "Sala Fria",
-    "description": "Sistema de Controle de Estoque Sala Fria",
-    "start_url": "/",
+    "description": "Controle inteligente de estoque e histórico para câmaras frias.",
+    "id": "/",
+    "start_url": "/?source=pwa",
     "display": "standalone",
+    "display_override": [
+        "window-controls-overlay",
+        "minimal-ui"
+    ],
+    "scope": "/",
     "background_color": "#0f172a",
-    "theme_color": "#0f172a",
+    "theme_color": "#6366f1",
+    "orientation": "portrait-primary",
+    "categories": [
+        "business",
+        "productivity",
+        "utilities"
+    ],
     "icons": [
         {
-            "src": "https://img.icons8.com/bubbles/100/000000/refrigerator.png",
-            "sizes": "100x100",
-            "type": "image/png"
+            "src": "https://img.icons8.com/bubbles/192/000000/refrigerator.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "https://img.icons8.com/bubbles/512/000000/refrigerator.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "https://img.icons8.com/bubbles/512/000000/refrigerator.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Ver Estoque",
+            "url": "/",
+            "icons": [
+                {
+                    "src": "https://img.icons8.com/bubbles/96/000000/package.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Histórico",
+            "url": "/?tab=history",
+            "icons": [
+                {
+                    "src": "https://img.icons8.com/bubbles/96/000000/history.png",
+                    "sizes": "96x96"
+                }
+            ]
         }
     ]
 }

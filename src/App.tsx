@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Zap, List, Video, Menu, CheckSquare, ClipboardList, ShoppingCart, Send, ShieldCheck, Droplets } from 'lucide-react';
+import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Zap, List, Video, Menu, CheckSquare, ClipboardList, ShoppingCart, Send, ShieldCheck, Droplets, Download } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
@@ -145,6 +145,28 @@ const App: React.FC = () => {
         const saved = localStorage.getItem('sala-fria-offline-queue');
         return saved ? JSON.parse(saved) : [];
     });
+
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+    // --- PWA Install Logic ---
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    }, []);
+
+    const handleInstallApp = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+            addNotification('Instalação iniciada!', 'success');
+        }
+    };
 
     // --- Offline Logic ---
     useEffect(() => {
@@ -2170,6 +2192,21 @@ const App: React.FC = () => {
                                 >
                                     Categorias <List size={20} />
                                 </button>
+                                {deferredPrompt && (
+                                    <button
+                                        className="primary"
+                                        onClick={handleInstallApp}
+                                        style={{
+                                            width: '100%',
+                                            justifyContent: 'space-between',
+                                            marginTop: '12px',
+                                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+                                        }}
+                                    >
+                                        Instalar Aplicativo <Download size={20} />
+                                    </button>
+                                )}
                             </div>
 
                             <div style={{ marginTop: 'auto', borderTop: '1px solid var(--card-border)', paddingTop: '20px' }}>

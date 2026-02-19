@@ -1,17 +1,20 @@
-const CACHE_NAME = 'sala-fria-v1';
-const ASSETS = [
+const CACHE_NAME = 'sala-fria-v2';
+const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
-    '/manifest.json'
+    '/manifest.json',
+    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap'
 ];
 
 // Install Event
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS);
+            console.log('SW: Pre-caching basic assets');
+            return cache.addAll(ASSETS_TO_CACHE);
         })
     );
+    self.skipWaiting();
 });
 
 // Activate Event
@@ -23,26 +26,36 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
+    self.clients.claim();
 });
 
-// Fetch Event (Network First, then Cache)
+// Fetch Event
 self.addEventListener('fetch', (event) => {
-    // Skip supabase and other external API calls for cache
-    if (!event.request.url.startsWith(self.location.origin)) {
+    const { request } = event;
+    const url = new URL(request.url);
+
+    // Don't cache supabase or chrome-extension requests
+    if (url.origin.includes('supabase.co') || url.protocol === 'chrome-extension:') {
         return;
     }
 
+    // Stale-While-Revalidate for local assets
     event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                const clonedResponse = response.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, clonedResponse);
-                });
-                return response;
-            })
-            .catch(() => {
-                return caches.match(event.request);
-            })
+        caches.match(request).then((cachedResponse) => {
+            const fetchPromise = fetch(request).then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(request, responseToCache);
+                    });
+                }
+                return networkResponse;
+            }).catch(() => {
+                // Fallback for offline if not in cache
+                return null;
+            });
+
+            return cachedResponse || fetchPromise;
+        })
     );
 });
