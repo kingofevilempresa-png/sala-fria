@@ -1155,13 +1155,14 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
                 {/* Nav & Toggle */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                         className={activeTab === 'inventory' ? 'primary' : 'secondary'}
                         style={{
                             padding: '10px',
+                            marginBottom: '-4px', // Pulls name below closer if it existed, but here helps layout
                             ...(activeTab === 'inventory' && (
                                 appMode === 'fast' ? {
                                     background: 'var(--accent-secondary)',
@@ -1272,10 +1273,10 @@ const App: React.FC = () => {
             {activeTab === 'inventory' && (
                 <main className="animate-in">
                     {/* Visual Map / Shelves Section */}
-                    <div style={{ marginBottom: '24px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <div style={{ marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                             <Layers size={18} style={{ color: 'var(--accent-primary)' }} />
-                            <h3 style={{ fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Mapa da Sala Fria</h3>
+                            <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Mapa da Sala Fria</h3>
                         </div>
                         <div className="horizontal-scroll">
                             <div
