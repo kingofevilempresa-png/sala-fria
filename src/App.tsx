@@ -902,7 +902,7 @@ const App: React.FC = () => {
     };
 
     const handleSeedHygiene = async () => {
-        const seedData = [
+        const seedData: Omit<HygieneTask, 'id'>[] = [
             { title: 'Higienização das mãos (Entrada/Troca)', frequency: 'daily', completed: false },
             { title: 'Limpeza de superfícies e utensílios', frequency: 'daily', completed: false },
             { title: 'Limpeza de pisos e ralos', frequency: 'daily', completed: false },
