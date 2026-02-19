@@ -26,9 +26,26 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW Registered!', reg))
-          .catch(err => console.log('SW Failed!', err));
+        // Usamos um parâmetro de versão para forçar o navegador a ver um arquivo novo se necessário
+        navigator.serviceWorker.register('/sw.js?v=3')
+          .then(reg => {
+            console.log('SW: Registrado com sucesso!', reg);
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing;
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                      console.log('SW: Novo conteúdo disponível, por favor atualize.');
+                    } else {
+                      console.log('SW: Conteúdo cacheado para uso offline.');
+                    }
+                  }
+                };
+              }
+            };
+          })
+          .catch(err => console.error('SW: Erro no registro!', err));
       });
     }
   </script>
