@@ -10,8 +10,13 @@
   <meta name="apple-mobile-web-app-title" content="Sala Fria" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0f172a" />
+  <meta name="format-detection" content="telephone=no" />
+
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="https://img.icons8.com/bubbles/512/000000/refrigerator.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="https://img.icons8.com/bubbles/152/000000/refrigerator.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://img.icons8.com/bubbles/180/000000/refrigerator.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="https://img.icons8.com/bubbles/167/000000/refrigerator.png" />
   <title>Sala Fria - Gestão de Estoque</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,26 +31,9 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // Usamos um parâmetro de versão para forçar o navegador a ver um arquivo novo se necessário
-        navigator.serviceWorker.register('/sw.js?v=3')
-          .then(reg => {
-            console.log('SW: Registrado com sucesso!', reg);
-            reg.onupdatefound = () => {
-              const installingWorker = reg.installing;
-              if (installingWorker) {
-                installingWorker.onstatechange = () => {
-                  if (installingWorker.state === 'installed') {
-                    if (navigator.serviceWorker.controller) {
-                      console.log('SW: Novo conteúdo disponível, por favor atualize.');
-                    } else {
-                      console.log('SW: Conteúdo cacheado para uso offline.');
-                    }
-                  }
-                };
-              }
-            };
-          })
-          .catch(err => console.error('SW: Erro no registro!', err));
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW: Registrado!', reg.scope))
+          .catch(err => console.error('SW: Erro!', err));
       });
     }
   </script>

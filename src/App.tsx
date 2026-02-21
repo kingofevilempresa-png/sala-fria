@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Zap, List, Video, Menu, CheckSquare, ClipboardList, ShoppingCart, Send, ShieldCheck, Droplets, Download } from 'lucide-react';
+import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Zap, List, Video, Menu, CheckSquare, ClipboardList, ShoppingCart, Send, ShieldCheck, Droplets, Download, BarChart2, TrendingUp, TrendingDown } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
@@ -34,12 +34,13 @@ interface VideoCard {
 
 interface HistoryEntry {
     id: string;
-    itemId: string;
-    itemName: string;
+    item_id: string;
+    item_name: string;
     type: 'add' | 'remove' | 'create' | 'delete' | 'edit';
     amount: number;
-    previousValue?: number;
+    previous_value?: number;
     timestamp: string;
+    pending?: boolean;
 }
 
 interface Task {
@@ -71,7 +72,7 @@ interface Notification {
 }
 
 const UNITS = [
-    'Kilos',
+    'kg',
     'Gramas',
     'Unidades',
     'Porção',
@@ -190,10 +191,19 @@ const App: React.FC = () => {
 
     useEffect(() => {
         localStorage.setItem('sala-fria-offline-queue', JSON.stringify(offlineQueue));
-        if (isOnline && offlineQueue.length > 0) {
-            syncOfflineData();
+        if (isOnline) {
+            if (offlineQueue.length > 0) {
+                syncOfflineData();
+            } else {
+                fetchData();
+            }
         }
-    }, [offlineQueue, isOnline]);
+    }, [isOnline]); // Trigger sync or refresh only when entering online state
+
+    // Ensure queue is pinned to local storage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('sala-fria-offline-queue', JSON.stringify(offlineQueue));
+    }, [offlineQueue]);
 
     const syncOfflineData = async () => {
         if (!isOnline || offlineQueue.length === 0) return;
@@ -201,23 +211,26 @@ const App: React.FC = () => {
         const queue = [...offlineQueue];
         setOfflineQueue([]); // Clear queue to prevent double sync
 
+        setIsSyncing(true);
+
         for (const action of queue) {
             try {
                 if (action.type === 'adjust') {
                     const { error } = await supabase.from('items').update({ value: action.newValue }).eq('id', action.itemId);
                     if (error) throw error;
-                    await logHistory(action.itemId, action.itemName, action.adjustType, action.amount, action.previousValue);
+                    await logHistory(action.itemId, action.itemName, action.adjustType, action.amount, action.previousValue, action.tempHistoryId, action.timestamp);
                 } else if (action.type === 'create_item') {
-                    const { error } = await supabase.from('items').insert([action.payload]);
-                    if (error) throw error;
-                    // We don't log history here because it's usually logged as 'create' via handleAddItem logic, 
-                    // but since we are syncing a creation, we might need to handle it.
+                    const { data, error } = await supabase.from('items').insert([action.payload]).select();
+                    if (error || !data) throw error;
+                    await logHistory(data[0].id, data[0].name, 'create', data[0].value, undefined, action.tempHistoryId, action.timestamp);
                 } else if (action.type === 'edit_item') {
                     const { error } = await supabase.from('items').update(action.payload).eq('id', action.itemId);
                     if (error) throw error;
+                    await logHistory(action.itemId, action.payload.name, 'edit', 0, action.previousValue, action.tempHistoryId, action.timestamp);
                 } else if (action.type === 'delete_item') {
                     const { error } = await supabase.from('items').delete().eq('id', action.itemId);
                     if (error) throw error;
+                    await logHistory(action.itemId, action.itemName, 'delete', 0, action.previousValue, action.tempHistoryId, action.timestamp);
                 } else if (action.type === 'create_category') {
                     const { error } = await supabase.from('categories').insert([action.payload]);
                     if (error) throw error;
@@ -251,12 +264,13 @@ const App: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Failed to sync action:', action, err);
-                // In a real app, we'd maybe put it back in the queue or show a sync error list
             }
         }
+
+        setIsSyncing(false);
         if (queue.length > 0) {
-            addNotification(`Sincronizados ${queue.length} alterações pendentes.`);
-            fetchData(); // Refresh all data to get real UUIDs and latest state
+            addNotification(`Sincronização concluída! ${queue.length} registros atualizados.`, 'success');
+            await fetchData();
         }
     };
 
@@ -264,7 +278,7 @@ const App: React.FC = () => {
     const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
     const [newLocationName, setNewLocationName] = useState('');
-    const [activeTab, setActiveTab] = useState<'inventory' | 'history' | 'gramature' | 'video' | 'tasks' | 'copy' | 'hygiene'>('inventory');
+    const [activeTab, setActiveTab] = useState<'inventory' | 'history' | 'gramature' | 'video' | 'tasks' | 'copy' | 'hygiene' | 'reports'>('inventory');
     const [appMode, setAppMode] = useState<'complete' | 'fast'>(() => {
         const saved = localStorage.getItem('sala-fria-mode');
         return (saved as 'complete' | 'fast') || 'complete';
@@ -291,9 +305,11 @@ const App: React.FC = () => {
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const [editingItem, setEditingItem] = useState<Item | null>(null);
     const [adjustingItem, setAdjustingItem] = useState<Item | null>(null);
+    const [cooldownItems, setCooldownItems] = useState<{ [key: string]: boolean }>({});
     const [adjustType, setAdjustType] = useState<'add' | 'remove'>('add');
     const [adjustValue, setAdjustValue] = useState('');
 
@@ -303,6 +319,13 @@ const App: React.FC = () => {
     const [newVideo, setNewVideo] = useState({ title: '', description: '', file: null as File | null });
     const [newTask, setNewTask] = useState({ title: '', description: '' });
     const [logoutPassword, setLogoutPassword] = useState('');
+    const [clearReportPassword, setClearReportPassword] = useState('');
+    const [isClearReportModalOpen, setIsClearReportModalOpen] = useState(false);
+    const [isExportFormatModalOpen, setIsExportFormatModalOpen] = useState(false);
+    const [exportType, setExportType] = useState<'excel' | 'word'>('excel');
+    const [reportDayFilter, setReportDayFilter] = useState<number | null>(null);
+    const [reportWeekdayFilter, setReportWeekdayFilter] = useState<number | null>(null);
+    const [reportWeekFilter, setReportWeekFilter] = useState<number | null>(null);
     const [uploadingVideo, setUploadingVideo] = useState(false);
 
     const [isHygieneModalOpen, setIsHygieneModalOpen] = useState(false);
@@ -366,8 +389,17 @@ const App: React.FC = () => {
                 localStorage.setItem('sala-fria-gramatures', JSON.stringify(gramRes.data));
             }
             if (histRes.data) {
-                setHistory(histRes.data);
-                localStorage.setItem('sala-fria-history', JSON.stringify(histRes.data));
+                setHistory(prev => {
+                    const pending = prev.filter(e => e.pending);
+                    // Combina o que veio do servidor com o que ainda está pendente de sync local
+                    const combined = [...pending, ...histRes.data];
+                    // Remove duplicatas por ID e ordena por tempo
+                    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values())
+                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                        .slice(0, 100);
+                    localStorage.setItem('sala-fria-history', JSON.stringify(unique));
+                    return unique;
+                });
             }
             if (hygieneRes.data) {
                 setHygieneTasks(hygieneRes.data);
@@ -544,11 +576,61 @@ const App: React.FC = () => {
         }, 5000);
     };
 
-    const logHistory = async (itemId: string, itemName: string, type: HistoryEntry['type'], amount: number, previousValue?: number) => {
-        const entry = { item_id: itemId, item_name: itemName, type, amount, previous_value: previousValue };
-        const { data, error } = await supabase.from('history').insert([entry]).select();
-        if (error) console.error('Error logging history:', error);
-        if (data) setHistory(prev => [data[0], ...prev].slice(0, 100));
+    const logHistory = async (itemId: string, itemName: string, type: HistoryEntry['type'], amount: number, previousValue?: number, tempIdToRemove?: string, forcedTimestamp?: string) => {
+        const timestamp = forcedTimestamp || new Date().toISOString();
+        const entry = {
+            item_id: itemId,
+            item_name: itemName,
+            type,
+            amount,
+            previous_value: previousValue,
+            timestamp: timestamp
+        };
+
+        const tempId = tempIdToRemove || 'temp-' + Date.now().toString() + Math.random().toString(36).substr(2, 5);
+
+        if (!isOnline && !tempIdToRemove) {
+            const localEntry = { ...entry, id: tempId, pending: true } as HistoryEntry;
+            setHistory(prev => {
+                const newHistory = [localEntry, ...prev.filter(e => e.id !== tempId)].slice(0, 100);
+                localStorage.setItem('sala-fria-history', JSON.stringify(newHistory));
+                return newHistory;
+            });
+            return { tempId, timestamp };
+        }
+
+        try {
+            const { data, error } = await supabase.from('history').insert([{
+                item_id: entry.item_id,
+                item_name: entry.item_name,
+                type: entry.type,
+                amount: entry.amount,
+                previous_value: entry.previous_value,
+                timestamp: entry.timestamp
+            }]).select();
+
+            if (error) throw error;
+
+            if (data) {
+                setHistory(prev => {
+                    const filtered = prev.filter(e => e.id !== tempId && e.id !== tempIdToRemove);
+                    const newHistory = [data[0], ...filtered].slice(0, 100);
+                    localStorage.setItem('sala-fria-history', JSON.stringify(newHistory));
+                    return newHistory;
+                });
+            }
+        } catch (error) {
+            console.error('Error logging history:', error);
+            if (!tempIdToRemove) {
+                const localEntry = { ...entry, id: tempId, pending: true } as HistoryEntry;
+                setHistory(prev => {
+                    const newHistory = [localEntry, ...prev.filter(e => e.id !== tempId)].slice(0, 100);
+                    localStorage.setItem('sala-fria-history', JSON.stringify(newHistory));
+                    return newHistory;
+                });
+            }
+        }
+        return { tempId, timestamp };
     };
 
     const handleAddItem = async () => {
@@ -567,7 +649,15 @@ const App: React.FC = () => {
             setItems(items.map(item => item.id === editingItem.id ? { ...item, ...itemPayload } : item));
 
             if (!isOnline) {
-                setOfflineQueue(prev => [...prev, { type: 'edit_item', itemId: editingItem.id, payload: itemPayload }]);
+                const { tempId, timestamp } = await logHistory(editingItem.id, newItem.name, 'edit', 0, editingItem.value);
+                setOfflineQueue(prev => [...prev, {
+                    type: 'edit_item',
+                    itemId: editingItem.id,
+                    payload: itemPayload,
+                    previousValue: editingItem.value,
+                    tempHistoryId: tempId,
+                    timestamp: timestamp
+                }]);
                 addNotification(`Item "${newItem.name}" atualizado localmente.`);
             } else {
                 const { error } = await supabase.from('items').update(itemPayload).eq('id', editingItem.id);
@@ -584,7 +674,13 @@ const App: React.FC = () => {
             setItems([...items, newItemLocal]);
 
             if (!isOnline) {
-                setOfflineQueue(prev => [...prev, { type: 'create_item', payload: itemPayload }]);
+                const { tempId, timestamp } = await logHistory(newItemLocal.id, newItemLocal.name, 'create', newItemLocal.value);
+                setOfflineQueue(prev => [...prev, {
+                    type: 'create_item',
+                    payload: itemPayload,
+                    tempHistoryId: tempId,
+                    timestamp: timestamp
+                }]);
                 addNotification(`Item "${newItem.name}" criado localmente.`);
             } else {
                 const { data, error } = await supabase.from('items').insert([itemPayload]).select();
@@ -607,7 +703,15 @@ const App: React.FC = () => {
         if (confirm(`Excluir "${name}"?`)) {
             setItems(items.filter(item => item.id !== id));
             if (!isOnline) {
-                setOfflineQueue(prev => [...prev, { type: 'delete_item', itemId: id }]);
+                const { tempId, timestamp } = await logHistory(id, name, 'delete', 0, itemToDelete?.value);
+                setOfflineQueue(prev => [...prev, {
+                    type: 'delete_item',
+                    itemId: id,
+                    itemName: name,
+                    previousValue: itemToDelete?.value,
+                    tempHistoryId: tempId,
+                    timestamp: timestamp
+                }]);
                 addNotification(`Item "${name}" removido localmente.`, 'info');
             } else {
                 const { error } = await supabase.from('items').delete().eq('id', id);
@@ -644,9 +748,12 @@ const App: React.FC = () => {
         const newValue = typeToUse === 'add' ? itemToAdjust.value + amount : Math.max(0, itemToAdjust.value - amount);
         setItems(prevItems => prevItems.map(item => item.id === itemToAdjust.id ? { ...item, value: newValue } : item));
         if (!isOnline) {
+            const { tempId, timestamp } = await logHistory(itemToAdjust.id, itemToAdjust.name, typeToUse, amount, itemToAdjust.value);
             setOfflineQueue(prev => [...prev, {
                 type: 'adjust', itemId: itemToAdjust.id, itemName: itemToAdjust.name,
-                adjustType: typeToUse, amount: amount, newValue: newValue, previousValue: itemToAdjust.value
+                adjustType: typeToUse, amount: amount, newValue: newValue, previousValue: itemToAdjust.value,
+                tempHistoryId: tempId,
+                timestamp: timestamp
             }]);
             playFeedback('success');
             setIsAdjustModalOpen(false);
@@ -778,14 +885,36 @@ const App: React.FC = () => {
     };
 
     const handleClearHistory = async () => {
-        if (confirm('Tem certeza que deseja apagar TODO o histórico? Esta ação é irreversível.')) {
-            const { error } = await supabase.from('history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (error) {
+        setIsClearReportModalOpen(true);
+    };
+
+    const confirmClearReport = async () => {
+        if (!clearReportPassword) return;
+        setLoading(true);
+        try {
+            const { error: authError } = await supabase.auth.signInWithPassword({
+                email: session?.user?.email || '',
+                password: clearReportPassword
+            });
+            if (authError) {
+                addNotification('Senha incorreta.', 'error');
+                setClearReportPassword('');
+                return;
+            }
+            const { error: dbError } = await supabase.from('history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (dbError) {
                 addNotification('Erro ao limpar histórico.', 'error');
                 return;
             }
             setHistory([]);
-            addNotification('Histórico limpo com sucesso.', 'info');
+            localStorage.setItem('sala-fria-history', JSON.stringify([]));
+            setIsClearReportModalOpen(false);
+            setClearReportPassword('');
+            addNotification('Relatório e histórico zerados com sucesso.', 'info');
+        } catch (error: any) {
+            addNotification('Erro ao processar solicitação.', 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -1019,7 +1148,6 @@ const App: React.FC = () => {
 
         let message = "*ESTOQUE GERAL*\n\n";
 
-        // Todos os itens sem exceção, ordenados por nome
         const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
 
         sortedItems.forEach(item => {
@@ -1027,10 +1155,192 @@ const App: React.FC = () => {
         });
 
         navigator.clipboard.writeText(message).then(() => {
-            addNotification('✅ Lista copiada para a área de transferência!');
+            addNotification('✅ Lista copiada!');
         }).catch(() => {
-            addNotification('Erro ao copiar lista. Tente novamente.', 'error');
+            addNotification('Erro ao copiar lista.', 'error');
         });
+    };
+
+    const handleExportToExcel = () => {
+        if (items.length === 0) return;
+        setExportType('excel');
+        setIsExportFormatModalOpen(true);
+    };
+
+    const handleExportToWord = () => {
+        if (items.length === 0) return;
+        setExportType('word');
+        setIsExportFormatModalOpen(true);
+    };
+
+    const downloadFile = (blob: Blob, name: string) => {
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", name);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const performExport = (format: 'xls' | 'csv' | 'doc' | 'google') => {
+        setIsExportFormatModalOpen(false);
+        const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
+        const filename = `Estoque_Sala_Fria_${dateStr}`;
+
+        if (format === 'csv') {
+            let csv = "\uFEFFItem;Categoria;Quantidade;Unidade;Mínimo\n";
+            [...items].sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+                csv += `${item.name};${item.category};${item.value};${item.unit};${item.min_value || '-'}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            downloadFile(blob, `${filename}.csv`);
+        } else if (format === 'google') {
+            let csv = "\uFEFFItem,Categoria,Quantidade,Unidade,Mínimo\n";
+            [...items].sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+                csv += `${item.name},${item.category},${item.value},${item.unit},${item.min_value || '-'}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            downloadFile(blob, `${filename}_Google.csv`);
+        } else if (format === 'xls') {
+            const header = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Worksheet ss:Name="Estoque">
+  <Table>
+   <Column ss:Width="250"/>
+   <Column ss:Width="150"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="80"/>
+   <Row>
+    <Cell><Data ss:Type="String">Item</Data></Cell>
+    <Cell><Data ss:Type="String">Categoria</Data></Cell>
+    <Cell><Data ss:Type="String">Quantidade</Data></Cell>
+    <Cell><Data ss:Type="String">Unidade</Data></Cell>
+    <Cell><Data ss:Type="String">Mínimo</Data></Cell>
+   </Row>`;
+
+            const rows = [...items].sort((a, b) => a.name.localeCompare(b.name)).map(item => `
+   <Row>
+    <Cell><Data ss:Type="String">${item.name}</Data></Cell>
+    <Cell><Data ss:Type="String">${item.category}</Data></Cell>
+    <Cell><Data ss:Type="Number">${item.value}</Data></Cell>
+    <Cell><Data ss:Type="String">${item.unit}</Data></Cell>
+    <Cell><Data ss:Type="String">${item.min_value || '-'}</Data></Cell>
+   </Row>`).join('');
+
+            const footer = `
+  </Table>
+ </Worksheet>
+</Workbook>`;
+            const blob = new Blob([header + rows + footer], { type: 'application/vnd.ms-excel' });
+            downloadFile(blob, `${filename}.xls`);
+        } else if (format === 'doc') {
+            const date = new Date().toLocaleDateString('pt-BR');
+            let docHtml = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>Estoque</title>
+                <style>
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td { border: 1px solid black; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    h1 { text-align: center; font-family: Arial, sans-serif; }
+                </style>
+                </head>
+                <body>
+                    <h1>Relatório de Estoque - ${date}</h1>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Categoria</th>
+                                <th>Quantidade</th>
+                                <th>Unidade</th>
+                                <th>Mínimo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${[...items].sort((a, b) => a.name.localeCompare(b.name)).map(item => `
+                                <tr>
+                                    <td>${item.name}</td>
+                                    <td>${item.category}</td>
+                                    <td>${item.value}</td>
+                                    <td>${item.unit}</td>
+                                    <td>${item.min_value || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `;
+            const blob = new Blob([docHtml], { type: 'application/msword' });
+            downloadFile(blob, `${filename}.doc`);
+        }
+        const label = format === 'google' ? 'Google Sheets' : format.toUpperCase();
+        addNotification(`Arquivo ${label} gerado com sucesso!`);
+    };
+
+
+    const getReportsData = () => {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+        let filteredHistory = history.filter(h => {
+            const ts = new Date(h.timestamp);
+            return ts >= startOfMonth && ts <= endOfMonth;
+        });
+
+        // Apply Week filter (Calendar weeks)
+        if (reportWeekFilter !== null) {
+            const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getDay(); // Sunday=0
+            filteredHistory = filteredHistory.filter(h => {
+                const ts = new Date(h.timestamp);
+                const weekNum = Math.ceil((ts.getDate() + firstDayOfMonth) / 7);
+                return weekNum === reportWeekFilter;
+            });
+        }
+
+        // Apply other filters
+        if (reportDayFilter !== null) {
+            filteredHistory = filteredHistory.filter(h => new Date(h.timestamp).getDate() === reportDayFilter);
+        }
+        if (reportWeekdayFilter !== null) {
+            filteredHistory = filteredHistory.filter(h => new Date(h.timestamp).getDay() === reportWeekdayFilter);
+        }
+
+        const itemStats: { [key: string]: { name: string, entries: number, exits: number, dates: Set<string> } } = {};
+        const dailyVolume: { [key: string]: number } = {};
+
+        filteredHistory.forEach(h => {
+            const dateStr = new Date(h.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            if (!itemStats[h.item_name]) {
+                itemStats[h.item_name] = { name: h.item_name, entries: 0, exits: 0, dates: new Set() };
+            }
+            if (h.type === 'add' || h.type === 'create') {
+                itemStats[h.item_name].entries += h.amount;
+            } else if (h.type === 'remove' || h.type === 'delete') {
+                itemStats[h.item_name].exits += h.amount;
+            }
+            itemStats[h.item_name].dates.add(dateStr);
+
+            const day = new Date(h.timestamp).toLocaleDateString('pt-BR');
+            dailyVolume[day] = (dailyVolume[day] || 0) + Math.abs(h.amount);
+        });
+
+        const sortedItems = Object.values(itemStats)
+            .sort((a, b) => (b.entries + b.exits) - (a.entries + a.exits))
+            .map(item => ({ ...item, dates: Array.from(item.dates).sort().reverse() }));
+        const sortedDays = Object.entries(dailyVolume).sort((a, b) => b[1] - (a[1] as number)).slice(0, 5) as [string, number][];
+
+        return { sortedItems, sortedDays, totalActions: filteredHistory.length };
     };
 
     if (authLoading) {
@@ -1125,18 +1435,33 @@ const App: React.FC = () => {
     return (
         <div className="container">
             {/* Toast Notifications */}
-            <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {notifications.map(n => (
-                    <div key={n.id} className="glass-card animate-in" style={{
-                        padding: '16px 20px',
-                        minWidth: '300px',
+            <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                {isSyncing && (
+                    <div className="glass-card animate-in" style={{
+                        padding: '8px 16px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '12px',
+                        gap: '10px',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        borderRadius: '20px',
+                        boxShadow: '0 0 15px rgba(59, 130, 246, 0.2)'
+                    }}>
+                        <Loader2 size={14} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sincronizando...</span>
+                    </div>
+                )}
+                {notifications.map(n => (
+                    <div key={n.id} className="glass-card animate-in" style={{
+                        padding: '12px 16px',
+                        minWidth: '250px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
                         borderLeft: `4px solid ${n.type === 'success' ? 'var(--success)' : n.type === 'error' ? 'var(--danger)' : 'var(--accent-primary)'}`
                     }}>
-                        {n.type === 'success' ? <CheckCircle2 size={20} style={{ color: 'var(--success)' }} /> : <AlertCircle size={20} style={{ color: 'var(--accent-primary)' }} />}
-                        <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{n.message}</span>
+                        {n.type === 'success' ? <CheckCircle2 size={18} style={{ color: 'var(--success)' }} /> : <AlertCircle size={18} style={{ color: 'var(--accent-primary)' }} />}
+                        <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{n.message}</span>
                     </div>
                 ))}
             </div>
@@ -1382,15 +1707,24 @@ const App: React.FC = () => {
                                         <div className="item-actions" style={{ borderTop: '1px solid var(--card-border)', paddingTop: '16px', marginTop: '12px' }}>
                                             <button
                                                 className="secondary"
+                                                disabled={!!cooldownItems[item.id]}
                                                 style={{
                                                     flex: 1,
                                                     justifyContent: 'center',
+                                                    opacity: cooldownItems[item.id] ? 0.5 : 1,
+                                                    cursor: cooldownItems[item.id] ? 'not-allowed' : 'pointer',
                                                     ...(appMode === 'fast' && {
                                                         border: '1px solid rgba(139, 92, 246, 0.3)',
                                                         boxShadow: '0 0 10px rgba(139, 92, 246, 0.2)'
                                                     })
                                                 }}
                                                 onClick={() => {
+                                                    if (cooldownItems[item.id]) return;
+                                                    setCooldownItems(prev => ({ ...prev, [item.id]: true }));
+                                                    setTimeout(() => {
+                                                        setCooldownItems(prev => ({ ...prev, [item.id]: false }));
+                                                    }, 1000);
+
                                                     if (appMode === 'fast') {
                                                         handleConfirmAdjust(item, fastAmount.toString(), 'remove');
                                                     } else {
@@ -1402,9 +1736,12 @@ const App: React.FC = () => {
                                             </button>
                                             <button
                                                 className="primary"
+                                                disabled={!!cooldownItems[item.id]}
                                                 style={{
                                                     flex: 1,
                                                     justifyContent: 'center',
+                                                    opacity: cooldownItems[item.id] ? 0.5 : 1,
+                                                    cursor: cooldownItems[item.id] ? 'not-allowed' : 'pointer',
                                                     background: appMode === 'fast'
                                                         ? 'linear-gradient(135deg, var(--accent-secondary), #a78bfa)'
                                                         : 'linear-gradient(135deg, #10b981, #34d399)',
@@ -1413,6 +1750,12 @@ const App: React.FC = () => {
                                                         : '0 4px 15px rgba(16, 185, 129, 0.4)'
                                                 }}
                                                 onClick={() => {
+                                                    if (cooldownItems[item.id]) return;
+                                                    setCooldownItems(prev => ({ ...prev, [item.id]: true }));
+                                                    setTimeout(() => {
+                                                        setCooldownItems(prev => ({ ...prev, [item.id]: false }));
+                                                    }, 1000);
+
                                                     if (appMode === 'fast') {
                                                         handleConfirmAdjust(item, fastAmount.toString(), 'add');
                                                     } else {
@@ -1476,11 +1819,23 @@ const App: React.FC = () => {
                             {history.length === 0 && !loading ? (
                                 <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>Sem movimentações registradas.</p>
                             ) : (
-                                history.map((entry: any) => (
+                                history.map((entry: HistoryEntry) => (
                                     <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
-                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: entry.type === 'add' ? 'rgba(16,185,129,0.1)' : entry.type === 'remove' ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: entry.type === 'add' ? 'var(--success)' : entry.type === 'remove' ? 'var(--danger)' : 'var(--accent-primary)' }}>{entry.type === 'add' ? <Plus size={18} /> : entry.type === 'remove' ? <Minus size={18} /> : <Calendar size={18} />}</div>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: entry.type === 'add' ? 'rgba(16,185,129,0.1)' : entry.type === 'remove' ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: entry.type === 'add' ? 'var(--success)' : entry.type === 'remove' ? 'var(--danger)' : 'var(--accent-primary)', position: 'relative' }}>
+                                            {entry.type === 'add' ? <Plus size={18} /> : entry.type === 'remove' ? <Minus size={18} /> : <Calendar size={18} />}
+                                            {entry.pending && (
+                                                <div style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--accent-primary)', borderRadius: '50%', width: '14px', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px var(--accent-primary)' }}>
+                                                    <Loader2 size={10} className="animate-spin" color="white" />
+                                                </div>
+                                            )}
+                                        </div>
                                         <div style={{ flex: 1 }}>
-                                            <p style={{ fontWeight: 600 }}>{entry.item_name}</p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <p style={{ fontWeight: 600 }}>{entry.item_name}</p>
+                                                {entry.pending && (
+                                                    <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(59,130,246,0.2)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>Offline</span>
+                                                )}
+                                            </div>
                                             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                                 {entry.type === 'add' ? 'Adicionado' : entry.type === 'remove' ? 'Removido' : entry.type === 'create' ? 'Criado' : entry.type === 'delete' ? 'Excluído' : 'Editado'}
                                             </p>
@@ -1488,7 +1843,7 @@ const App: React.FC = () => {
 
                                         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
-                                                {entry.previous_value !== undefined && (
+                                                {entry.previous_value !== undefined && entry.previous_value !== null && (
                                                     <>
                                                         <span style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>{entry.previous_value}</span>
                                                         <ArrowRight size={10} style={{ opacity: 0.4 }} />
@@ -1727,9 +2082,17 @@ const App: React.FC = () => {
                                     <ShoppingCart size={28} style={{ color: 'var(--accent-primary)' }} />
                                     <h2>Copia Itens</h2>
                                 </div>
-                                <button className="primary" style={{ padding: '10px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #FF9800, #F57C00)', border: 'none', boxShadow: '0 4px 15px rgba(255, 152, 0, 0.3)' }} onClick={handleShareShoppingList}>
-                                    <Send size={18} /> Copiar Todos
-                                </button>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button className="primary" style={{ padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #FF9800, #F57C00)', border: 'none', boxShadow: '0 4px 15px rgba(255, 152, 0, 0.3)', fontSize: '0.8rem' }} onClick={handleShareShoppingList}>
+                                        <Send size={16} /> Copiar
+                                    </button>
+                                    <button className="secondary" style={{ padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }} onClick={handleExportToExcel}>
+                                        <Download size={16} color="#10b981" /> Excel
+                                    </button>
+                                    <button className="secondary" style={{ padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }} onClick={handleExportToWord}>
+                                        <Download size={16} color="#3b82f6" /> Word
+                                    </button>
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1783,6 +2146,161 @@ const App: React.FC = () => {
                         </div>
                     </main>
                 )}
+
+            {/* REPORTS TAB */}
+            {activeTab === 'reports' && (
+                <main className="animate-in">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div className="glass-card" style={{ padding: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <BarChart2 size={24} style={{ color: 'var(--accent-primary)' }} />
+                                    <div>
+                                        <h2 style={{ fontSize: '1.25rem' }}>Relatórios</h2>
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{new Date().toLocaleString('pt-BR', { month: 'long' })} / {new Date().getFullYear()}</p>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Dia:</span>
+                                        <select
+                                            value={reportDayFilter || ''}
+                                            onChange={e => setReportDayFilter(e.target.value ? parseInt(e.target.value) : null)}
+                                            style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600, padding: '2px 4px', cursor: 'pointer', outline: 'none' }}
+                                            title="Filtrar por dia do mês"
+                                        >
+                                            <option value="" style={{ background: 'var(--bg-secondary)' }}>Todos</option>
+                                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                                <option key={day} value={day} style={{ background: 'var(--bg-secondary)' }}>{day}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={handleClearHistory}
+                                        title="Zerar Relatório"
+                                        style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Filters Bar */}
+                            <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: 600 }}>Semanas do Mês</p>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        {[1, 2, 3, 4, 5].map(w => (
+                                            <button
+                                                key={w}
+                                                onClick={() => setReportWeekFilter(reportWeekFilter === w ? null : w)}
+                                                className={reportWeekFilter === w ? 'primary' : 'secondary'}
+                                                style={{ flex: 1, padding: '10px 0', borderRadius: '10px', fontSize: '0.8rem' }}
+                                            >
+                                                Sem {w}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '4px' }}>* Início do mês ao dia 31</p>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Filtrar Dia da Semana</p>
+                                    <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day, idx) => (
+                                            <button
+                                                key={day}
+                                                onClick={() => setReportWeekdayFilter(reportWeekdayFilter === idx ? null : idx)}
+                                                className={reportWeekdayFilter === idx ? 'primary' : 'secondary'}
+                                                style={{ minWidth: '40px', padding: '8px 0', borderRadius: '8px', fontSize: '0.7rem' }}
+                                            >
+                                                {day}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                {(reportDayFilter !== null || reportWeekdayFilter !== null || reportWeekFilter !== null) && (
+                                    <button
+                                        onClick={() => { setReportDayFilter(null); setReportWeekdayFilter(null); setReportWeekFilter(null); }}
+                                        style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', alignSelf: 'flex-start', background: 'transparent', padding: '4px 0', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                    >
+                                        <X size={14} /> Limpar Filtros
+                                    </button>
+                                )}
+                            </div>
+
+                            {(() => {
+                                const { sortedItems, sortedDays, totalActions } = getReportsData();
+                                if (totalActions === 0) {
+                                    return (
+                                        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed var(--card-border)' }}>
+                                            <Search size={40} style={{ color: 'var(--text-secondary)', marginBottom: '16px', opacity: 0.3 }} />
+                                            <p style={{ color: 'var(--text-secondary)' }}>Nenhuma movimentação encontrada para este filtro.</p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                        {/* Counters */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div className="glass-card" style={{ padding: '16px', background: 'rgba(59, 130, 246, 0.05)', textAlign: 'center' }}>
+                                                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-primary)' }}>{totalActions}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Movimentos</div>
+                                            </div>
+                                            <div className="glass-card" style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.05)', textAlign: 'center' }}>
+                                                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--success)' }}>{sortedItems.length}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Itens Únicos</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Activity List */}
+                                        <div>
+                                            <h3 style={{ fontSize: '1rem', marginBottom: '16px', fontWeight: 600 }}>Volume por Item</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {sortedItems.map((item: any) => (
+                                                    <div key={item.name} className="glass-card" style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.name}</span>
+                                                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                                {item.dates.map((d: string) => (
+                                                                    <span key={d} style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>{d}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                                            {item.entries > 0 && <span style={{ color: 'var(--success)', fontSize: '0.85rem', fontWeight: 600 }}>+{item.entries.toFixed(1)}</span>}
+                                                            {item.exits > 0 && <span style={{ color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 600 }}>-{item.exits.toFixed(1)}</span>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Peak Days (only relevant if not filtering by a single specific day) */}
+                                        {reportDayFilter === null && sortedDays.length > 1 && (
+                                            <div>
+                                                <h3 style={{ fontSize: '1rem', marginBottom: '16px', fontWeight: 600 }}>Dias de Pico</h3>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                    {sortedDays.map(([day, vol]: [string, number]) => (
+                                                        <div key={day} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <span style={{ width: '85px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{day}</span>
+                                                            <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                                                                <div style={{ height: '100%', width: `${Math.min(100, (vol / sortedDays[0][1]) * 100)}%`, background: 'var(--accent-primary)', borderRadius: '3px' }}></div>
+                                                            </div>
+                                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{vol.toFixed(0)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                </main>
+            )}
 
             {/* MODALS */}
             {
@@ -2107,6 +2625,36 @@ const App: React.FC = () => {
                 )
             }
 
+            {
+                isClearReportModalOpen && (
+                    <div className="modal-overlay" onClick={() => setIsClearReportModalOpen(false)}>
+                        <div className="glass-card modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <h2 style={{ fontSize: '1.25rem', color: 'var(--danger)' }}>Zerar Relatório</h2>
+                                <button onClick={() => setIsClearReportModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                            </div>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                                Esta ação irá <strong>apagar todo o histórico</strong> permanentemente. Os relatórios ficarão vazios.
+                            </p>
+                            <div className="form-group">
+                                <label>Digite sua senha para confirmar</label>
+                                <input
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={clearReportPassword}
+                                    onChange={e => setClearReportPassword(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && confirmClearReport()}
+                                    autoFocus
+                                />
+                            </div>
+                            <button className="danger" style={{ width: '100%', marginTop: '12px' }} onClick={confirmClearReport} disabled={loading}>
+                                {loading ? <Loader2 size={18} className="animate-spin" /> : <><Trash2 size={18} /> Apagar Tudo</>}
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
+
             {/* SIDEBAR / HAMBURGER MENU */}
             {
                 isSidebarOpen && (
@@ -2131,13 +2679,6 @@ const App: React.FC = () => {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <button
-                                    className={activeTab === 'inventory' ? 'primary' : 'secondary'}
-                                    onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }}
-                                    style={{ width: '100%', justifyContent: 'space-between' }}
-                                >
-                                    Inventário <Package size={20} />
-                                </button>
-                                <button
                                     className={activeTab === 'gramature' ? 'primary' : 'secondary'}
                                     onClick={() => { setActiveTab('gramature'); setIsSidebarOpen(false); }}
                                     style={{ width: '100%', justifyContent: 'space-between' }}
@@ -2159,11 +2700,11 @@ const App: React.FC = () => {
                                     Vídeos <Video size={20} />
                                 </button>
                                 <button
-                                    className={activeTab === 'tasks' ? 'primary' : 'secondary'}
-                                    onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }}
+                                    className={activeTab === 'reports' ? 'primary' : 'secondary'}
+                                    onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}
                                     style={{ width: '100%', justifyContent: 'space-between' }}
                                 >
-                                    Tarefas <CheckSquare size={20} />
+                                    Relatórios <BarChart2 size={20} />
                                 </button>
                                 <button
                                     className={activeTab === 'copy' ? 'primary' : 'secondary'}
@@ -2227,6 +2768,60 @@ const App: React.FC = () => {
                                 >
                                     <LogOut size={18} /> Sair do App
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {
+                isExportFormatModalOpen && (
+                    <div className="modal-overlay" onClick={() => setIsExportFormatModalOpen(false)}>
+                        <div className="glass-card modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '1.25rem' }}>Exportar como {exportType === 'excel' ? 'Excel' : 'Word'}</h2>
+                                <button onClick={() => setIsExportFormatModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {exportType === 'excel' ? (
+                                    <>
+                                        <button
+                                            className="secondary"
+                                            onClick={() => performExport('xls')}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '12px', textAlign: 'left' }}
+                                        >
+                                            <div style={{ fontWeight: 600 }}>Excel (.xls)</div>
+                                            <ArrowRight size={18} />
+                                        </button>
+                                        <button
+                                            className="secondary"
+                                            onClick={() => performExport('google')}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '12px', textAlign: 'left' }}
+                                        >
+                                            <div style={{ fontWeight: 600 }}>Planilhas Google (.csv)</div>
+                                            <ArrowRight size={18} />
+                                        </button>
+                                        <button
+                                            className="secondary"
+                                            onClick={() => performExport('csv')}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '12px', textAlign: 'left' }}
+                                        >
+                                            <div style={{ fontWeight: 600 }}>CSV (.csv)</div>
+                                            <ArrowRight size={18} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            className="secondary"
+                                            onClick={() => performExport('doc')}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '12px', textAlign: 'left' }}
+                                        >
+                                            <div style={{ fontWeight: 600 }}>Word (.doc)</div>
+                                            <ArrowRight size={18} />
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
