@@ -2704,7 +2704,7 @@ const App: React.FC = () => {
                                 <h2 style={{ fontSize: '1.5rem', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textAlign: 'right' }}>Sala Fria</h2>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
                                 <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '4px', paddingLeft: '8px' }}>Principal</p>
                                 <button
                                     className={activeTab === 'reports' ? 'primary' : 'secondary'}
@@ -2783,7 +2783,7 @@ const App: React.FC = () => {
                                 )}
                             </div>
 
-                            <div style={{ marginTop: 'auto', borderTop: '1px solid var(--card-border)', paddingTop: '20px' }}>
+                            <div style={{ marginTop: 'auto', borderTop: '1px solid var(--card-border)', paddingTop: '20px', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', padding: '0 8px' }}>
                                     <div style={{ overflow: 'hidden', textAlign: 'left' }}>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{session?.user.email?.split('@')[0]}</p>
