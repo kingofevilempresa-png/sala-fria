@@ -387,7 +387,7 @@ select:focus {
 
 .shelf-card {
   flex: 0 0 65px;
-  padding: 6px 4px;
+  padding: 4px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
@@ -397,7 +397,7 @@ select:focus {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 48px;
+  min-height: 40px;
 }
 
 .shelf-card>div:last-child {

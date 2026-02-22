@@ -1184,7 +1184,7 @@ const App: React.FC = () => {
         document.body.removeChild(link);
     };
 
-    const performExport = (format: 'xls' | 'csv' | 'doc' | 'google') => {
+    const performExport = (format: 'xls' | 'csv' | 'doc' | 'google' | 'clipboard') => {
         setIsExportFormatModalOpen(false);
         const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
         const filename = `Estoque_Sala_Fria_${dateStr}`;
@@ -1203,6 +1203,17 @@ const App: React.FC = () => {
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             downloadFile(blob, `${filename}_Google.csv`);
+        } else if (format === 'clipboard') {
+            let csv = "Item\tCategoria\tQuantidade\tUnidade\tMínimo\n";
+            [...items].sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+                csv += `${item.name}\t${item.category}\t${item.value}\t${item.unit}\t${item.min_value || '-'}\n`;
+            });
+            navigator.clipboard.writeText(csv).then(() => {
+                addNotification('📋 Dados copiados no formato de planilha!');
+            }).catch(() => {
+                addNotification('Erro ao copiar dados.', 'error');
+            });
+            return;
         } else if (format === 'xls') {
             const header = `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
@@ -1598,34 +1609,50 @@ const App: React.FC = () => {
             {activeTab === 'inventory' && (
                 <main className="animate-in">
                     {/* Visual Map / Shelves Section */}
-                    <div style={{ marginBottom: '0px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0px' }}>
-                            <Layers size={18} style={{ color: 'var(--accent-primary)' }} />
-                            <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Mapa da Sala Fria</h3>
-                        </div>
-                        <div className="horizontal-scroll">
-                            <div
-                                className={`shelf-card ${selectedLocation === null ? 'active' : ''}`}
-                                onClick={() => setSelectedLocation(null)}
-                            >
-                                <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>Todos</div>
-                                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{items.length} itens</div>
+                    {locations.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.8, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                <Layers size={14} style={{ color: 'var(--accent-primary)' }} />
+                                <h3 style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Mapa da Sala Fria</h3>
                             </div>
-                            {locations.map((loc: Location) => {
-                                const count = items.filter(i => i.location === loc.name).length;
-                                return (
-                                    <div
-                                        key={loc.id}
-                                        className={`shelf-card ${selectedLocation === loc.name ? 'active' : ''}`}
-                                        onClick={() => setSelectedLocation(loc.name)}
-                                    >
-                                        <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{loc.name}</div>
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{count} itens</div>
-                                    </div>
-                                );
-                            })}
+                            <div className="horizontal-scroll" style={{ flex: 1, padding: '2px 0' }}>
+                                <div
+                                    className={`shelf-card ${selectedLocation === null ? 'active' : ''}`}
+                                    onClick={() => setSelectedLocation(null)}
+                                    style={{ flex: '0 0 65px' }}
+                                >
+                                    <div style={{ fontSize: '0.65rem', fontWeight: 600 }}>Todos</div>
+                                    <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)' }}>{items.length} itens</div>
+                                </div>
+                                {locations.map((loc: Location) => {
+                                    const count = items.filter(i => i.location === loc.name).length;
+                                    return (
+                                        <div
+                                            key={loc.id}
+                                            className={`shelf-card ${selectedLocation === loc.name ? 'active' : ''}`}
+                                            onClick={() => setSelectedLocation(loc.name)}
+                                            style={{ flex: '0 0 65px' }}
+                                        >
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 600 }}>{loc.name}</div>
+                                            <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)' }}>{count} itens</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Low Stock Summary text - Discreet version */}
+                    {items.filter(i => i.min_value != null && i.value < (i.min_value || 0)).length > 0 && (
+                        <div style={{ marginBottom: '12px', paddingLeft: '4px' }}>
+                            <span style={{ color: 'var(--danger)', fontSize: '0.7rem', fontWeight: 600, opacity: 0.9 }}>
+                                Baixo: {
+                                    items.filter(i => i.min_value != null && i.value < (i.min_value || 0))
+                                        .map(i => i.name).join(', ')
+                                }
+                            </span>
+                        </div>
+                    )}
 
                     <div className="items-grid">
                         {sortedAndFilteredItems.length === 0 && !loading ? (
@@ -2756,7 +2783,7 @@ const App: React.FC = () => {
                                     <div style={{ overflow: 'hidden', textAlign: 'left' }}>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{session?.user.email?.split('@')[0]}</p>
                                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Status: {isOnline ? 'Online' : 'Offline'}</p>
-                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '2px', letterSpacing: '0.5px' }}>v1.0</p>
+                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '2px', letterSpacing: '0.5px' }}>v1.1</p>
                                     </div>
                                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <User size={18} color="white" />
@@ -2799,7 +2826,25 @@ const App: React.FC = () => {
                                             onClick={() => performExport('google')}
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '12px', textAlign: 'left' }}
                                         >
-                                            <div style={{ fontWeight: 600 }}>Planilhas Google (.csv)</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '32px', height: '32px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Download size={18} style={{ color: 'var(--success)' }} />
+                                                </div>
+                                                <div style={{ fontWeight: 600 }}>Planilhas Google (.csv)</div>
+                                            </div>
+                                            <ArrowRight size={18} />
+                                        </button>
+                                        <button
+                                            className="primary"
+                                            onClick={() => performExport('clipboard')}
+                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '12px', textAlign: 'left', background: 'rgba(59, 130, 246, 0.1)', border: '1px dashed var(--accent-primary)', color: 'var(--accent-primary)', boxShadow: 'none' }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '32px', height: '32px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <CheckSquare size={18} />
+                                                </div>
+                                                <div style={{ fontWeight: 600 }}>Copiar p/ Planilha (Rápido)</div>
+                                            </div>
                                             <ArrowRight size={18} />
                                         </button>
                                         <button
@@ -2807,7 +2852,12 @@ const App: React.FC = () => {
                                             onClick={() => performExport('csv')}
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '12px', textAlign: 'left' }}
                                         >
-                                            <div style={{ fontWeight: 600 }}>CSV (.csv)</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '32px', height: '32px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Download size={18} />
+                                                </div>
+                                                <div style={{ fontWeight: 600 }}>CSV (.csv)</div>
+                                            </div>
                                             <ArrowRight size={18} />
                                         </button>
                                     </>

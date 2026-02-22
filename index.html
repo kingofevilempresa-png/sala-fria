@@ -3,21 +3,26 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/png" href="/pwa-192.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <!-- Android PWA -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="application-name" content="Sala Fria" />
+
+  <!-- iOS (Apple) -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Sala Fria" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#0f172a" />
-  <meta name="format-detection" content="telephone=no" />
+  <link rel="apple-touch-icon" href="/pwa-512.png" />
 
+  <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="https://img.icons8.com/bubbles/512/000000/refrigerator.png" />
-  <link rel="apple-touch-icon" sizes="152x152" href="https://img.icons8.com/bubbles/152/000000/refrigerator.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="https://img.icons8.com/bubbles/180/000000/refrigerator.png" />
-  <link rel="apple-touch-icon" sizes="167x167" href="https://img.icons8.com/bubbles/167/000000/refrigerator.png" />
+
   <title>Sala Fria - Gestão de Estoque</title>
+  <meta name="description" content="Controle inteligente de estoque para câmaras frias." />
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -28,6 +33,20 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    // Registra Service Worker para PWA Android
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then((reg) => {
+            console.log('[SW] Registrado com sucesso, scope:', reg.scope);
+            // Verifica atualizações
+            reg.update();
+          })
+          .catch((err) => console.error('[SW] Erro no registro:', err));
+      });
+    }
+  </script>
 </body>
 
 </html>
