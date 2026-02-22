@@ -2690,10 +2690,10 @@ const App: React.FC = () => {
                             className="glass-card animate-in-right"
                             onClick={(e) => e.stopPropagation()}
                             style={{
-                                width: '210px',
-                                height: '100%',
+                                width: '280px',
+                                height: '100dvh',
                                 borderRadius: '20px 0 0 20px',
-                                padding: '32px 16px',
+                                padding: '32px 20px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '24px'
