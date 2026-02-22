@@ -223,22 +223,18 @@ select:focus {
 
 .modal-overlay {
   position: fixed;
-  /* Use negative inset to bleed beyond the screen, preventing gaps during mobile scroll/bounce */
-  top: -10dvh;
-  left: -10dvw;
-  right: -10dvw;
-  bottom: -10dvh;
-  background: rgba(0, 0, 0, 0.88);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: flex;
-  justify-content: flex-end;
-  /* Align sidebar to the right */
+  justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 0;
-  /* Remove padding to avoid gaps */
+  padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
   overscroll-behavior: contain;
+  touch-action: none;
+  /* Prevents underlying page scroll on some mobile browsers */
 }
 
 .modal-content {

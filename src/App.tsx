@@ -2691,11 +2691,9 @@ const App: React.FC = () => {
                             onClick={(e) => e.stopPropagation()}
                             style={{
                                 width: '280px',
-                                height: '120dvh', /* Much taller than the screen */
-                                position: 'relative',
-                                top: '-10dvh', /* Centered vertically to hide the extensions */
+                                height: '100dvh',
                                 borderRadius: '20px 0 0 20px',
-                                padding: 'calc(10dvh + 32px) 20px 32px 20px', /* Add padding to compensate for top bleed */
+                                padding: '32px 20px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '24px'
