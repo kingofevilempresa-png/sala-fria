@@ -24,7 +24,7 @@ Uma aplicação web progressiva (PWA) moderna e robusta para o gerenciamento de 
 - **CSS Custom Properties** (Design System com Glassmorphism)
 
 ## 📱 Instalação
-
+App. https://sala-fria.vercel.app/
 Como o app é um **PWA**, você não precisa baixar na loja:
 1. Acesse o link do sistema no navegador do celular (Chrome/Safari).
 2. Clique em "Instalar Aplicativo" no menu ou "Adicionar à tela de início".
