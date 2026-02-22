@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Zap, List, Video, Menu, CheckSquare, ClipboardList, ShoppingCart, Send, ShieldCheck, Droplets, Download, BarChart2, TrendingUp, TrendingDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Edit2, Package, Layers, X, Save, Search, Minus, History, Scaling, Calendar, Weight, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, Loader2, LogOut, User, Lock, Mail, Zap, List, Video, Menu, CheckSquare, ClipboardList, ShoppingCart, Send, ShieldCheck, Droplets, Download, BarChart2, TrendingUp, TrendingDown, Mic, MicOff, ClipboardCheck } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
@@ -36,7 +36,7 @@ interface HistoryEntry {
     id: string;
     item_id: string;
     item_name: string;
-    type: 'add' | 'remove' | 'create' | 'delete' | 'edit';
+    type: 'add' | 'remove' | 'create' | 'delete' | 'edit' | 'audit';
     amount: number;
     previous_value?: number;
     timestamp: string;
@@ -100,6 +100,8 @@ const App: React.FC = () => {
     // --- Auth State ---
     const [session, setSession] = useState<Session | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
+    const recognitionRef = useRef<any>(null);
+    const lastFeedbackRef = useRef<{ text: string, time: number }>({ text: '', time: 0 });
     const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -306,6 +308,15 @@ const App: React.FC = () => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [isAuditSummaryOpen, setIsAuditSummaryOpen] = useState(false);
+    const [currentAuditIndex, setCurrentAuditIndex] = useState(0);
+    const [auditEntries, setAuditEntries] = useState<{ id: string, name: string, expected: number, actual: number, unit: string }[]>([]);
+    const [auditActualValue, setAuditActualValue] = useState('');
+    const [isVoiceActive, setIsVoiceActive] = useState(false);
+    const [voiceTranscript, setVoiceTranscript] = useState('');
+    const [voiceMode, setVoiceMode] = useState<'single' | 'continuous'>('single');
+    const [isVoiceModeModalOpen, setIsVoiceModeModalOpen] = useState(false);
 
     const [editingItem, setEditingItem] = useState<Item | null>(null);
     const [adjustingItem, setAdjustingItem] = useState<Item | null>(null);
@@ -1296,6 +1307,224 @@ const App: React.FC = () => {
         }
         const label = format === 'google' ? 'Google Sheets' : format.toUpperCase();
         addNotification(`Arquivo ${label} gerado com sucesso!`);
+    };
+
+
+    const toggleVoiceControl = (mode?: 'single' | 'continuous', isAutoRestart = false) => {
+        const selectedMode = mode || voiceMode;
+
+        if (isVoiceActive && !mode) {
+            (window as any).isVoiceActiveRef = false;
+            setIsVoiceActive(false);
+            if (recognitionRef.current) {
+                try { recognitionRef.current.stop(); } catch (e) { }
+            }
+            return;
+        }
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            addNotification('Seu navegador não suporta comandos de voz.', 'error');
+            return;
+        }
+
+        if (recognitionRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+        }
+
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+
+        recognition.lang = 'pt-BR';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.continuous = selectedMode === 'continuous';
+
+        let silenceTimer: any;
+
+        const resetTimer = () => {
+            if (selectedMode === 'single') {
+                if (silenceTimer) clearTimeout(silenceTimer);
+                silenceTimer = setTimeout(() => {
+                    recognition.stop();
+                }, 10000);
+            }
+        };
+
+        recognition.onstart = () => {
+            setIsVoiceActive(true);
+            if (!isAutoRestart) {
+                addNotification(`🎙️ Voz: Modo ${selectedMode === 'continuous' ? 'Mãos Sujas' : 'Único'} Ativado`, 'info');
+            }
+            resetTimer();
+        };
+
+        recognition.onresult = (event: any) => {
+            resetTimer();
+            const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+            setVoiceTranscript(transcript);
+            processVoiceCommand(transcript);
+
+            if (selectedMode === 'single') {
+                recognition.stop();
+            }
+        };
+
+        recognition.onerror = (event: any) => {
+            if (event.error === 'no-speech' && selectedMode === 'continuous') return;
+            setIsVoiceActive(false);
+            if (silenceTimer) clearTimeout(silenceTimer);
+        };
+
+        recognition.onend = () => {
+            if (silenceTimer) clearTimeout(silenceTimer);
+
+            // Auto-restart for hands-free mode if still active AND not currently speaking feedback
+            if (selectedMode === 'continuous' && (window as any).isVoiceActiveRef && !(window as any).isSpeakingRef) {
+                try { recognition.start(); } catch (e) { /* ignore */ }
+            } else if (!((window as any).isSpeakingRef)) {
+                setIsVoiceActive(false);
+            }
+        };
+
+        (window as any).isVoiceActiveRef = true;
+        recognition.start();
+    };
+
+    // Update stop logic to clear the ref
+    useEffect(() => {
+        if (!isVoiceActive) (window as any).isVoiceActiveRef = false;
+    }, [isVoiceActive]);
+
+    const speakFeedback = (text: string) => {
+        const SpeechSynthesis = window.speechSynthesis;
+        if (!SpeechSynthesis) return;
+
+        // Prevent repeating the exact same message within 3 seconds
+        const now = Date.now();
+        if (lastFeedbackRef.current.text === text && (now - lastFeedbackRef.current.time) < 3000) {
+            return;
+        }
+        lastFeedbackRef.current = { text, time: now };
+
+        // Prevent feedback loop: stop recognition before speaking
+        (window as any).isSpeakingRef = true;
+        if (recognitionRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+        }
+
+        SpeechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 1.1;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => {
+            (window as any).isSpeakingRef = false;
+            // Restart recognition after speaking if we are in continuous mode
+            if (voiceMode === 'continuous' && (window as any).isVoiceActiveRef) {
+                setTimeout(() => {
+                    toggleVoiceControl('continuous', true);
+                }, 200);
+            }
+        };
+
+        SpeechSynthesis.speak(utterance);
+    };
+
+    const processVoiceCommand = (text: string) => {
+        const addPattern = /(adicionar|somar|entrou|colocar)\s+(\d+)\s+(.+)/i;
+        const removePattern = /(remover|subtrair|saiu|tirar|gasto)\s+(\d+)\s+(.+)/i;
+        const setPattern = /(estoque|tem|quantidade)\s+(\d+)\s+(.+)/i;
+
+        let match = text.match(addPattern);
+        let action: 'add' | 'remove' | 'set' | null = null;
+        let amount = 0;
+        let itemName = '';
+
+        if (match) {
+            action = 'add';
+            amount = parseInt(match[2]);
+            itemName = match[3];
+        } else if ((match = text.match(removePattern))) {
+            action = 'remove';
+            amount = parseInt(match[2]);
+            itemName = match[3];
+        } else if ((match = text.match(setPattern))) {
+            action = 'set';
+            amount = parseInt(match[2]);
+            itemName = match[3];
+        }
+
+        if (!action) {
+            addNotification(`Não entendi: "${text}"`, 'info');
+            speakFeedback(`Não entendi`);
+            return;
+        }
+
+        const foundItem = items.find(item =>
+            item.name.toLowerCase().includes(itemName.trim()) ||
+            itemName.trim().includes(item.name.toLowerCase())
+        );
+
+        if (foundItem) {
+            handleConfirmAdjust(foundItem, amount.toString(), action === 'set' ? 'add' : action as any);
+            const msg = `${action === 'add' ? 'Adicionado' : action === 'remove' ? 'Removido' : 'Definido'} ${amount} em ${foundItem.name}`;
+            addNotification(`✅ Voz: ${msg}`);
+            speakFeedback(msg);
+        } else {
+            const errorMsg = `Item ${itemName} não encontrado.`;
+            addNotification(errorMsg, 'error');
+            speakFeedback(errorMsg);
+        }
+    };
+
+    const handleAuditNext = () => {
+        const currentItem = sortedAndFilteredItems[currentAuditIndex];
+        const val = parseFloat(auditActualValue);
+        const actual = isNaN(val) ? currentItem.value : val;
+
+        setAuditEntries(prev => [...prev, {
+            id: currentItem.id,
+            name: currentItem.name,
+            expected: currentItem.value,
+            actual: actual,
+            unit: currentItem.unit
+        }]);
+        setAuditActualValue('');
+
+        if (currentAuditIndex < sortedAndFilteredItems.length - 1) {
+            setCurrentAuditIndex(prev => prev + 1);
+        } else {
+            setIsAuditModalOpen(false);
+            setIsAuditSummaryOpen(true);
+        }
+    };
+
+    const finalizeAudit = async () => {
+        setIsSyncing(true);
+        try {
+            for (const entry of auditEntries) {
+                if (entry.actual !== entry.expected) {
+                    const diff = Math.abs(entry.actual - entry.expected);
+                    const type = entry.actual > entry.expected ? 'add' : 'remove';
+                    const item = items.find(i => i.id === entry.id);
+                    if (item) {
+                        await handleConfirmAdjust(item, diff.toString(), type);
+                        await logHistory(entry.id, entry.name, 'audit', diff, entry.expected);
+                    }
+                }
+            }
+            addNotification('✅ Auditoria finalizada!');
+            await fetchData();
+        } catch (error) {
+            addNotification('Erro ao finalizar auditoria.', 'error');
+        } finally {
+            setIsSyncing(false);
+            setIsAuditSummaryOpen(false);
+        }
     };
 
 
@@ -2766,6 +2995,29 @@ const App: React.FC = () => {
                                 >
                                     Gramaturas <Scaling size={20} />
                                 </button>
+
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '4px', paddingLeft: '8px', marginTop: '12px' }}>Avançado</p>
+                                <button
+                                    className="secondary"
+                                    onClick={() => { setIsAuditModalOpen(true); setCurrentAuditIndex(0); setAuditEntries([]); setIsSidebarOpen(false); }}
+                                    style={{ width: '100%', justifyContent: 'space-between', background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.3)' }}
+                                >
+                                    Auditoria (v1.3) <ClipboardCheck size={20} color="var(--accent-primary)" />
+                                </button>
+                                <button
+                                    className={isVoiceActive ? 'primary' : 'secondary'}
+                                    onClick={() => {
+                                        if (isVoiceActive) {
+                                            setIsVoiceActive(false);
+                                        } else {
+                                            setIsVoiceModeModalOpen(true);
+                                        }
+                                        setIsSidebarOpen(false);
+                                    }}
+                                    style={{ width: '100%', justifyContent: 'space-between', background: isVoiceActive ? 'linear-gradient(135deg, #ef4444, #f87171)' : 'rgba(255, 255, 255, 0.05)' }}
+                                >
+                                    {isVoiceActive ? 'Parar Voz' : 'Comando de Voz'} {isVoiceActive ? <MicOff size={20} /> : <Mic size={20} />}
+                                </button>
                                 {deferredPrompt && (
                                     <button
                                         className="primary"
@@ -2788,7 +3040,7 @@ const App: React.FC = () => {
                                     <div style={{ overflow: 'hidden', textAlign: 'left' }}>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{session?.user.email?.split('@')[0]}</p>
                                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Status: {isOnline ? 'Online' : 'Offline'}</p>
-                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '2px', letterSpacing: '0.5px' }}>v1.2</p>
+                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '2px', letterSpacing: '0.5px' }}>v1.3</p>
                                     </div>
                                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <User size={18} color="white" />
@@ -2883,7 +3135,155 @@ const App: React.FC = () => {
                     </div>
                 )
             }
-        </div >
+            {
+                isAuditModalOpen && sortedAndFilteredItems[currentAuditIndex] && (
+                    <div className="modal-overlay">
+                        <div className="glass-card modal-content animate-in" style={{ maxWidth: '400px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <div>
+                                    <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <ClipboardCheck size={20} color="var(--accent-primary)" /> Auditoria Quinzena
+                                    </h2>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Item {currentAuditIndex + 1} de {sortedAndFilteredItems.length}</p>
+                                </div>
+                                <button onClick={() => setIsAuditModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }} title="Fechar Auditoria"><X size={20} /></button>
+                            </div>
+
+                            <div style={{ background: 'rgba(59, 130, 246, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(59, 130, 246, 0.2)', marginBottom: '20px', textAlign: 'center' }}>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '4px' }}>Contagem Real para:</p>
+                                <h3 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>{sortedAndFilteredItems[currentAuditIndex].name}</h3>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Esperado: <strong>{sortedAndFilteredItems[currentAuditIndex].value} {sortedAndFilteredItems[currentAuditIndex].unit}</strong></p>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Quantidade Encontrada ({sortedAndFilteredItems[currentAuditIndex].unit})</label>
+                                <input
+                                    type="number"
+                                    autoFocus
+                                    placeholder="Digite a quantidade..."
+                                    value={auditActualValue}
+                                    onChange={e => setAuditActualValue(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleAuditNext()}
+                                    style={{ fontSize: '1.2rem', textAlign: 'center', height: '56px' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                                <button className="secondary" style={{ flex: 1 }} onClick={() => setAuditActualValue(sortedAndFilteredItems[currentAuditIndex].value.toString())}>Igual</button>
+                                <button className="primary" style={{ flex: 2 }} onClick={handleAuditNext}>
+                                    {currentAuditIndex < sortedAndFilteredItems.length - 1 ? 'Próximo Item' : 'Ver Resumo'} <ArrowRight size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                isAuditSummaryOpen && (
+                    <div className="modal-overlay">
+                        <div className="glass-card modal-content animate-in" style={{ maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '1.25rem' }}>Resumo da Auditoria</h2>
+                                <button onClick={() => setIsAuditSummaryOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }} title="Fechar Resumo"><X size={20} /></button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+                                {auditEntries.map(entry => {
+                                    const diff = entry.actual - entry.expected;
+                                    return (
+                                        <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{entry.name}</p>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Exp: {entry.expected} | Real: {entry.actual}</p>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                {diff === 0 ? (
+                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Sem alteração</span>
+                                                ) : (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: diff > 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}>
+                                                        {diff > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                                        {diff > 0 ? `+${diff}` : diff} {entry.unit}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <button className="primary" style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #10b981, #34d399)' }} onClick={finalizeAudit} disabled={isSyncing}>
+                                {isSyncing ? <Loader2 size={20} className="animate-spin" /> : 'Aplicar Ajustes e Finalizar'}
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                isVoiceActive && (
+                    <div style={{ position: 'fixed', bottom: '60px', left: '50%', transform: 'translateX(-50%)', zIndex: 10000, width: '90%', maxWidth: '400px' }}>
+                        <div className="glass-card animate-bounce-in" style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 10px 30px rgba(239, 68, 68, 0.4)', borderRadius: '24px', textAlign: 'center', color: 'white' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '12px' }}>
+                                <div className="animate-pulse" style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Mic size={24} />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Ouvindo...</h3>
+                            </div>
+                            <p style={{ fontSize: '0.9rem', opacity: 0.9, fontStyle: 'italic', marginBottom: '8px' }}>
+                                "{voiceTranscript || 'Diga algo como: Adicionar 10 Bacon'}"
+                            </p>
+                            <button onClick={() => setIsVoiceActive(false)} style={{ background: 'rgba(0,0,0,0.2)', border: 'none', color: 'white', padding: '6px 16px', borderRadius: '12px', fontSize: '0.8rem' }}>Cancelar</button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                isVoiceModeModalOpen && (
+                    <div className="modal-overlay" onClick={() => setIsVoiceModeModalOpen(false)}>
+                        <div className="glass-card modal-content animate-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                <h2 style={{ fontSize: '1.25rem' }}>Escolha o Modo de Voz</h2>
+                                <button onClick={() => setIsVoiceModeModalOpen(false)} style={{ background: 'transparent', padding: '4px', color: 'var(--text-secondary)' }} title="Fechar"><X size={20} /></button>
+                            </div>
+
+                            <div style={{ display: 'grid', gap: '16px' }}>
+                                <button
+                                    className="secondary"
+                                    style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '16px' }}
+                                    onClick={() => {
+                                        setVoiceMode('single');
+                                        setIsVoiceModeModalOpen(false);
+                                        toggleVoiceControl('single');
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>Modo Único</div>
+                                    <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Escuta um comando e desliga.</div>
+                                </button>
+
+                                <button
+                                    className="primary"
+                                    style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '16px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)' }}
+                                    onClick={() => {
+                                        setVoiceMode('continuous');
+                                        setIsVoiceModeModalOpen(false);
+                                        toggleVoiceControl('continuous');
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 800, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'white', animation: 'pulse 1.5s infinite' }}></div>
+                                        Modo Mãos Sujas
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem' }}>O microfone nunca desliga sozinho. Ideal para trabalho pesado.</div>
+                                </button>
+                            </div>
+                            <p style={{ marginTop: '16px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Fale nomes de itens e quantidades para ajustar.</p>
+                        </div>
+                    </div>
+                )
+            }
+        </div>
     );
 };
 
