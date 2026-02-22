@@ -1,5 +1,5 @@
 {
-    "name": "sala-fria-manager",
+    "name": "supabase-white-blue",
     "private": true,
     "version": "0.1.0",
     "type": "module",
@@ -19,6 +19,7 @@
         "@types/react-dom": "^18.2.7",
         "@vitejs/plugin-react": "^4.0.3",
         "typescript": "^5.0.2",
-        "vite": "^4.4.5"
+        "vite": "^4.4.5",
+        "vite-plugin-pwa": "^0.16.4"
     }
 }
