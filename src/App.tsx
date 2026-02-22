@@ -2756,6 +2756,7 @@ const App: React.FC = () => {
                                     <div style={{ overflow: 'hidden', textAlign: 'left' }}>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{session?.user.email?.split('@')[0]}</p>
                                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Status: {isOnline ? 'Online' : 'Offline'}</p>
+                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '2px', letterSpacing: '0.5px' }}>v1.0</p>
                                     </div>
                                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <User size={18} color="white" />
