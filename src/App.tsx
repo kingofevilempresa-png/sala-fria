@@ -2110,14 +2110,14 @@ const App: React.FC = () => {
                                     <h2>Copia Itens</h2>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button className="primary" style={{ padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #FF9800, #F57C00)', border: 'none', boxShadow: '0 4px 15px rgba(255, 152, 0, 0.3)', fontSize: '0.8rem' }} onClick={handleShareShoppingList}>
-                                        <Send size={16} /> Copiar
+                                    <button className="primary" style={{ padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #FF9800, #F57C00)', border: 'none', boxShadow: '0 4px 15px rgba(255, 152, 0, 0.3)' }} onClick={handleShareShoppingList} title="Copiar Lista">
+                                        <Send size={20} />
                                     </button>
-                                    <button className="secondary" style={{ padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }} onClick={handleExportToExcel}>
-                                        <Download size={16} color="#10b981" /> Excel
+                                    <button className="secondary" style={{ padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={handleExportToExcel} title="Exportar Excel">
+                                        <Download size={20} color="#10b981" />
                                     </button>
-                                    <button className="secondary" style={{ padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }} onClick={handleExportToWord}>
-                                        <Download size={16} color="#3b82f6" /> Word
+                                    <button className="secondary" style={{ padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={handleExportToWord} title="Exportar Word">
+                                        <Download size={20} color="#3b82f6" />
                                     </button>
                                 </div>
                             </div>
@@ -2705,12 +2705,13 @@ const App: React.FC = () => {
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '4px', paddingLeft: '8px' }}>Principal</p>
                                 <button
-                                    className={activeTab === 'gramature' ? 'primary' : 'secondary'}
-                                    onClick={() => { setActiveTab('gramature'); setIsSidebarOpen(false); }}
+                                    className={activeTab === 'reports' ? 'primary' : 'secondary'}
+                                    onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}
                                     style={{ width: '100%', justifyContent: 'space-between' }}
                                 >
-                                    Gramaturas <Scaling size={20} />
+                                    Relatórios <BarChart2 size={20} />
                                 </button>
                                 <button
                                     className={activeTab === 'history' ? 'primary' : 'secondary'}
@@ -2718,20 +2719,6 @@ const App: React.FC = () => {
                                     style={{ width: '100%', justifyContent: 'space-between' }}
                                 >
                                     Histórico <History size={20} />
-                                </button>
-                                <button
-                                    className={activeTab === 'video' ? 'primary' : 'secondary'}
-                                    onClick={() => { setActiveTab('video'); setIsSidebarOpen(false); }}
-                                    style={{ width: '100%', justifyContent: 'space-between' }}
-                                >
-                                    Vídeos <Video size={20} />
-                                </button>
-                                <button
-                                    className={activeTab === 'reports' ? 'primary' : 'secondary'}
-                                    onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}
-                                    style={{ width: '100%', justifyContent: 'space-between' }}
-                                >
-                                    Relatórios <BarChart2 size={20} />
                                 </button>
                                 <button
                                     className={activeTab === 'copy' ? 'primary' : 'secondary'}
@@ -2747,6 +2734,17 @@ const App: React.FC = () => {
                                 >
                                     Higiene <ShieldCheck size={20} />
                                 </button>
+
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '4px', paddingLeft: '8px', marginTop: '12px' }}>Monitoramento</p>
+                                <button
+                                    className={activeTab === 'video' ? 'primary' : 'secondary'}
+                                    onClick={() => { setActiveTab('video'); setIsSidebarOpen(false); }}
+                                    style={{ width: '100%', justifyContent: 'space-between' }}
+                                >
+                                    Vídeos <Video size={20} />
+                                </button>
+
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '4px', paddingLeft: '8px', marginTop: '12px' }}>Configuração</p>
                                 <button
                                     className="secondary"
                                     onClick={() => { setIsLocationModalOpen(true); setIsSidebarOpen(false); }}
@@ -2760,6 +2758,13 @@ const App: React.FC = () => {
                                     style={{ width: '100%', justifyContent: 'space-between' }}
                                 >
                                     Categorias <List size={20} />
+                                </button>
+                                <button
+                                    className={activeTab === 'gramature' ? 'primary' : 'secondary'}
+                                    onClick={() => { setActiveTab('gramature'); setIsSidebarOpen(false); }}
+                                    style={{ width: '100%', justifyContent: 'space-between' }}
+                                >
+                                    Gramaturas <Scaling size={20} />
                                 </button>
                                 {deferredPrompt && (
                                     <button
@@ -2783,7 +2788,7 @@ const App: React.FC = () => {
                                     <div style={{ overflow: 'hidden', textAlign: 'left' }}>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{session?.user.email?.split('@')[0]}</p>
                                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Status: {isOnline ? 'Online' : 'Offline'}</p>
-                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '2px', letterSpacing: '0.5px' }}>v1.1</p>
+                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '2px', letterSpacing: '0.5px' }}>v1.2</p>
                                     </div>
                                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <User size={18} color="white" />
